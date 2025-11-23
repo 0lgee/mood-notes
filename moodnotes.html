@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>気分ノート 📝</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      /* Lucideアイコンの初期化用スタイル */
+      .lucide {
+        display: inline-block;
+      }
+      /* カレンダーセルの縦横比を正方形に保つ */
+      .aspect-square {
+        aspect-ratio: 1 / 1;
+      }
+      /* ホバー時の詳細ポップアップ用スタイル */
+      .group:hover .group-hover\:block {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="app"
+      class="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4"
+    ></div>
+
+    <script>
+      // =================================================================
+      // 1. グローバルなState変数
+      // =================================================================
+      let notes = [];
+      let categories = [];
+      let currentNote = "";
+      let selectedCategory = null;
+      let searchTerm = "";
+      let activeView = "notes";
+      let editingNote = null;
+      let commentingNote = null;
+      let commentText = "";
+
+      // =================================================================
+      // 2. ユーティリティ関数
+      // =================================================================
+
+      // localStorageからデータをロード
+      const loadData = () => {
+        try {
+          const notesStr = localStorage.getItem("mood-notes");
+          const categoriesStr = localStorage.getItem("mood-categories");
+
+          if (notesStr) notes = JSON.parse(notesStr);
+          if (categoriesStr) categories = JSON.parse(categoriesStr);
+
+          // ロード後に描画
+          renderApp();
+        } catch (error) {
+          console.error("データロード失敗:", error);
+        }
+      };
+
+      // localStorageにデータを保存
+      const saveData = () => {
+        try {
+          localStorage.setItem("mood-notes", JSON.stringify(notes));
+          localStorage.setItem("mood-categories", JSON.stringify(categories));
+        } catch (error) {
+          console.error("データ保存失敗:", error);
+        }
+      };
+
+      // ルートDOM要素を空にし、新しいHTMLを描画する
+      const renderApp = () => {
+        const appRoot = document.getElementById("app");
+        appRoot.innerHTML = createLayout();
+
+        // イベントリスナーの設定
+        attachEventListeners();
+
+        // Lucideアイコンを置き換える
+        lucide.createIcons();
+      };
+
+      // =================================================================
+      // 3. データ操作ロジック
+      // =================================================================
+
+      const addNote = () => {
+        if (currentNote.trim() && selectedCategory) {
+          const newNote = {
+            id: Date.now(),
+            content: currentNote,
+            category: selectedCategory,
+            timestamp: new Date().toISOString(),
+            dateStr: new Date().toLocaleString("ja-JP"),
+            comments: [],
+          };
+
+          if (editingNote) {
+            notes = notes.map((n) =>
+              n.id === editingNote.id
+                ? {
+                    ...editingNote,
+                    content: currentNote,
+                    category: selectedCategory,
+                  }
+                : n
+            );
+          } else {
+            notes = [newNote, ...notes];
+          }
+
+          saveData();
+
+          // Stateクリアと再描画
+          currentNote = "";
+          selectedCategory = null;
+          editingNote = null;
+          renderApp();
+        }
+      };
+
+      const deleteNote = (id) => {
+        if (confirm("本当にこのノートを削除しますか？")) {
+          notes = notes.filter((n) => n.id !== id);
+          saveData();
+          renderApp();
+        }
+      };
+
+      const editNote = (noteId) => {
+        const noteToEdit = notes.find((n) => n.id === noteId);
+        if (noteToEdit) {
+          currentNote = noteToEdit.content;
+          selectedCategory = noteToEdit.category;
+          editingNote = noteToEdit;
+          activeView = "notes";
+          renderApp();
+        }
+      };
+
+      const addComment = (noteId) => {
+        if (commentText.trim()) {
+          const newComment = {
+            id: Date.now(),
+            content: commentText,
+            timestamp: new Date().toISOString(),
+            dateStr: new Date().toLocaleString("ja-JP"),
+          };
+
+          notes = notes.map((note) => {
+            if (note.id === noteId) {
+              return {
+                ...note,
+                comments: [...(note.comments || []), newComment],
+              };
+            }
+            return note;
+          });
+
+          saveData();
+          commentText = "";
+          commentingNote = null;
+          renderApp();
+        }
+      };
+
+      const deleteComment = (noteId, commentId) => {
+        notes = notes.map((note) => {
+          if (note.id === noteId) {
+            return {
+              ...note,
+              comments: note.comments.filter((c) => c.id !== commentId),
+            };
+          }
+          return note;
+        });
+        saveData();
+        renderApp();
+      };
+
+      const addCategory = () => {
+        const newCategoryName = document
+          .getElementById("newCategoryNameInput")
+          .value.trim();
+        const newCategoryColor = document.getElementById(
+          "newCategoryColorInput"
+        ).value;
+
+        if (newCategoryName) {
+          const newCategory = {
+            name: newCategoryName,
+            color: newCategoryColor,
+          };
+          categories = [...categories, newCategory];
+          saveData();
+
+          // Stateと入力クリア
+          document.getElementById("newCategoryNameInput").value = "";
+          // document.getElementById('newCategoryColorInput').value = '#FFB6C1'; // 色はそのまま残すか、初期値に戻すかはお好みで
+          renderApp();
+        }
+      };
+
+      const deleteCategory = (categoryName) => {
+        if (confirm(`本当にタグ「${categoryName}」を削除しますか？`)) {
+          categories = categories.filter((c) => c.name !== categoryName);
+          saveData();
+          renderApp();
+        }
+      };
+
+      // =================================================================
+      // 4. データフィルタリング・整形
+      // =================================================================
+
+      const getFilteredNotes = () => {
+        if (!searchTerm) return notes;
+        return notes.filter(
+          (note) =>
+            note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            note.category.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      };
+
+      const getGroupedNotes = () => {
+        return categories
+          .map((cat) => ({
+            category: cat,
+            notes: notes.filter((n) => n.category.name === cat.name),
+          }))
+          .filter((group) => group.notes.length > 0);
+      };
+
+      // カレンダーデータの生成ロジック (元のコードから移植)
+      const getMonthlyCalendarData = () => {
+        if (notes.length === 0) return [];
+
+        const monthSet = new Set();
+        notes.forEach((note) => {
+          const date = new Date(note.timestamp);
+          const yearMonth = `${date.getFullYear()}-${date.getMonth()}`;
+          monthSet.add(yearMonth);
+        });
+
+        const sortedMonths = Array.from(monthSet)
+          .map((ym) => {
+            const [year, month] = ym.split("-").map(Number);
+            return { year, month };
+          })
+          .sort((a, b) => {
+            if (a.year !== b.year) return b.year - a.year;
+            return b.month - a.month;
+          });
+
+        const months = [];
+
+        sortedMonths.forEach(({ year, month }) => {
+          const firstDay = new Date(year, month, 1);
+          const lastDay = new Date(year, month + 1, 0);
+          const firstDayOfWeek = firstDay.getDay();
+
+          const weeks = [];
+          let currentWeek = [];
+
+          for (let i = 0; i < firstDayOfWeek; i++) {
+            currentWeek.push(null);
+          }
+
+          for (let day = 1; day <= lastDay.getDate(); day++) {
+            const date = new Date(year, month, day);
+            const dateStr = date.toISOString().split("T")[0];
+
+            const dayNotes = notes.filter((note) => {
+              const noteDate = new Date(note.timestamp)
+                .toISOString()
+                .split("T")[0];
+              return noteDate === dateStr;
+            });
+
+            const uniqueCategories = [];
+            const categoryMap = new Map();
+            dayNotes.forEach((note) => {
+              if (!categoryMap.has(note.category.name)) {
+                categoryMap.set(note.category.name, note.category);
+                uniqueCategories.push(note.category);
+              }
+            });
+
+            currentWeek.push({
+              date: dateStr,
+              day: day,
+              notes: dayNotes,
+              categories: uniqueCategories,
+            });
+
+            if (currentWeek.length === 7) {
+              weeks.push(currentWeek);
+              currentWeek = [];
+            }
+          }
+
+          if (currentWeek.length > 0) {
+            while (currentWeek.length < 7) {
+              currentWeek.push(null);
+            }
+            weeks.push(currentWeek);
+          }
+
+          months.push({
+            year,
+            month: month + 1,
+            monthName: `${year}年${month + 1}月`,
+            weeks,
+          });
+        });
+
+        return months;
+      };
+
+      // =================================================================
+      // 5. HTML生成関数 (レンダリング)
+      // =================================================================
+
+      const createLayout = () => {
+        const monthlyData = getMonthlyCalendarData();
+        const filteredNotes = getFilteredNotes();
+        const groupedNotes = getGroupedNotes();
+
+        return `
+                <div class="max-w-6xl mx-auto">
+                    ${createHeader()}
+                    ${
+                      activeView === "notes"
+                        ? createNotesView(filteredNotes)
+                        : ""
+                    }
+                    ${
+                      activeView === "categories"
+                        ? createCategoriesView(groupedNotes)
+                        : ""
+                    }
+                    ${
+                      activeView === "calendar"
+                        ? createCalendarView(monthlyData)
+                        : ""
+                    }
+                    ${activeView === "manage" ? createManageView() : ""}
+                </div>
+            `;
+      };
+
+      const createHeader = () => {
+        return `
+                <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                    <h1 class="text-3xl font-bold text-gray-800 mb-4">気分ノート 📝</h1>
+                    
+                    <div class="flex gap-2 mb-4" id="nav-buttons">
+                        <button data-view="notes" class="px-4 py-2 rounded-lg font-medium transition ${
+                          activeView === "notes"
+                            ? "bg-purple-500 text-white"
+                            : "bg-gray-100 text-gray-600"
+                        }">
+                            📝 ノート
+                        </button>
+                        <button data-view="categories" class="px-4 py-2 rounded-lg font-medium transition ${
+                          activeView === "categories"
+                            ? "bg-purple-500 text-white"
+                            : "bg-gray-100 text-gray-600"
+                        }">
+                            🏷️ カテゴリー
+                        </button>
+                        <button data-view="calendar" class="px-4 py-2 rounded-lg font-medium transition ${
+                          activeView === "calendar"
+                            ? "bg-purple-500 text-white"
+                            : "bg-gray-100 text-gray-600"
+                        }">
+                            📅 カレンダー
+                        </button>
+                        <button data-view="manage" class="px-4 py-2 rounded-lg font-medium transition ${
+                          activeView === "manage"
+                            ? "bg-purple-500 text-white"
+                            : "bg-gray-100 text-gray-600"
+                        }">
+                            ⚙️ タグ管理
+                        </button>
+                    </div>
+
+                    <div class="relative">
+                        <i data-lucide="search" class="lucide absolute left-3 top-3 text-gray-400" size="20"></i>
+                        <input
+                            type="text"
+                            placeholder="ノートやタグを検索..."
+                            value="${searchTerm}"
+                            id="searchTermInput"
+                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                    </div>
+                </div>
+            `;
+      };
+
+      const createNotesView = (filteredNotes) => {
+        return `
+                <div class="space-y-6">
+                    <div class="bg-white rounded-2xl shadow-lg p-6">
+                        <h2 class="text-xl font-semibold mb-4">${
+                          editingNote ? "ノートを編集" : "新しいノート"
+                        }</h2>
+                        
+                        ${
+                          categories.length === 0
+                            ? `
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                                <p class="text-yellow-800">まだ気分タグがありません。「タグ管理」でタグを作成してください</p>
+                            </div>
+                        `
+                            : ""
+                        }
+                        
+                        <textarea
+                            id="currentNoteInput"
+                            placeholder="気分を記録しましょう..."
+                            class="w-full p-3 border border-gray-300 rounded-lg mb-4 min-h-32 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        >${currentNote}</textarea>
+                        
+                        ${
+                          categories.length > 0
+                            ? `
+                            <div class="mb-4">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="tag" class="lucide text-gray-600" size="18"></i>
+                                    <span class="font-medium text-gray-700">気分を選択</span>
+                                </div>
+                                <div class="flex flex-wrap gap-2" id="category-selector">
+                                    ${categories
+                                      .map(
+                                        (cat, idx) => `
+                                        <button
+                                            data-category-name="${cat.name}"
+                                            class="px-4 py-2 rounded-full font-medium transition transform hover:scale-105 ${
+                                              selectedCategory?.name ===
+                                              cat.name
+                                                ? "ring-2 ring-purple-500 ring-offset-2"
+                                                : ""
+                                            }"
+                                            style="background-color: ${
+                                              cat.color
+                                            }; color: #fff;"
+                                        >
+                                            ${cat.name}
+                                        </button>
+                                    `
+                                      )
+                                      .join("")}
+                                </div>
+                            </div>
+                        `
+                            : ""
+                        }
+
+                        <button
+                            id="addNoteButton"
+                            data-action="${editingNote ? "update" : "add"}"
+                            ${
+                              !currentNote.trim() || !selectedCategory
+                                ? "disabled"
+                                : ""
+                            }
+                            class="w-full bg-purple-500 text-white py-3 rounded-lg font-medium hover:bg-purple-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                        >
+                            <i data-lucide="plus-circle" class="lucide" size="20"></i>
+                            ${editingNote ? "ノートを更新" : "ノートを保存"}
+                        </button>
+                        ${
+                          editingNote
+                            ? `
+                            <button
+                                id="cancelEditButton"
+                                class="w-full mt-2 bg-gray-200 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-300 transition"
+                            >
+                                キャンセル
+                            </button>
+                        `
+                            : ""
+                        }
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-lg p-6">
+                        <h2 class="text-xl font-semibold mb-4">すべてのノート (${
+                          filteredNotes.length
+                        })</h2>
+                        <div class="space-y-3">
+                            ${
+                              filteredNotes.length === 0
+                                ? `
+                                <p class="text-gray-400 text-center py-8">まだノートがありません。気分の記録を始めましょう！</p>
+                            `
+                                : filteredNotes
+                                    .map(
+                                      (note) => `
+                                <div
+                                    class="border-l-4 p-4 rounded-lg shadow-sm hover:shadow-md transition"
+                                    style="border-color: ${
+                                      note.category.color
+                                    }; background-color: ${
+                                        note.category.color
+                                      }10;"
+                                >
+                                    <div class="flex justify-between items-start mb-2">
+                                        <span
+                                            class="px-3 py-1 rounded-full text-sm font-medium text-white"
+                                            style="background-color: ${
+                                              note.category.color
+                                            };"
+                                        >
+                                            ${note.category.name}
+                                        </span>
+                                        <div class="flex gap-2">
+                                            <button
+                                                data-note-id="${note.id}"
+                                                class="edit-note-btn text-blue-500 hover:text-blue-700"
+                                            >
+                                                <i data-lucide="edit-2" class="lucide" size="16"></i>
+                                            </button>
+                                            <button
+                                                data-note-id="${note.id}"
+                                                class="delete-note-btn text-red-500 hover:text-red-700"
+                                            >
+                                                <i data-lucide="trash-2" class="lucide" size="16"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p class="text-gray-800 mb-2">${
+                                      note.content
+                                    }</p>
+                                    <p class="text-sm text-gray-500 mb-3">${
+                                      note.dateStr
+                                    }</p>
+                                    
+                                    <div class="border-t pt-3 mt-3">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="text-sm font-medium text-gray-600">
+                                                コメント (${
+                                                  note.comments
+                                                    ? note.comments.length
+                                                    : 0
+                                                })
+                                            </span>
+                                        </div>
+                                        
+                                        ${
+                                          note.comments &&
+                                          note.comments.length > 0
+                                            ? `
+                                            <div class="space-y-2 mb-3">
+                                                ${note.comments
+                                                  .map(
+                                                    (comment) => `
+                                                    <div class="bg-white p-2 rounded border">
+                                                        <p class="text-sm text-gray-700">${comment.content}</p>
+                                                        <div class="flex justify-between items-center mt-1">
+                                                            <p class="text-xs text-gray-400">${comment.dateStr}</p>
+                                                            <button
+                                                                data-note-id="${note.id}"
+                                                                data-comment-id="${comment.id}"
+                                                                class="delete-comment-btn text-red-400 hover:text-red-600"
+                                                            >
+                                                                <i data-lucide="trash-2" class="lucide" size="12"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                `
+                                                  )
+                                                  .join("")}
+                                            </div>
+                                        `
+                                            : ""
+                                        }
+                                        
+                                        ${
+                                          commentingNote === note.id
+                                            ? `
+                                            <div class="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    id="commentInput-${note.id}"
+                                                    data-note-id="${note.id}"
+                                                    value="${commentText}"
+                                                    placeholder="コメントを書く..."
+                                                    class="comment-text-input flex-1 p-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                />
+                                                <button
+                                                    data-note-id="${note.id}"
+                                                    class="send-comment-btn bg-purple-500 text-white px-3 py-2 rounded-lg hover:bg-purple-600 transition"
+                                                >
+                                                    <i data-lucide="send" class="lucide" size="16"></i>
+                                                </button>
+                                                <button
+                                                    data-note-id="${note.id}"
+                                                    class="cancel-comment-btn bg-gray-200 text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-300 transition"
+                                                >
+                                                    <i data-lucide="x" class="lucide" size="16"></i>
+                                                </button>
+                                            </div>
+                                        `
+                                            : `
+                                            <button
+                                                data-note-id="${note.id}"
+                                                class="toggle-comment-input text-sm text-purple-500 hover:text-purple-700 font-medium"
+                                            >
+                                                + コメントを追加
+                                            </button>
+                                        `
+                                        }
+                                    </div>
+                                </div>
+                            `
+                                    )
+                                    .join("")
+                            }
+                        </div>
+                    </div>
+                </div>
+            `;
+      };
+
+      const createCategoriesView = (groupedNotes) => {
+        return `
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h2 class="text-xl font-semibold mb-4">気分別に分類</h2>
+                    ${
+                      groupedNotes.length === 0
+                        ? `
+                        <p class="text-gray-400 text-center py-8">まだノートの記録がありません</p>
+                    `
+                        : `
+                        <div class="space-y-4">
+                            ${groupedNotes
+                              .map(
+                                (group, idx) => `
+                                <div class="border-l-4 rounded-lg p-4" style="border-color: ${
+                                  group.category.color
+                                }">
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <span
+                                            class="px-3 py-1 rounded-full text-white font-medium"
+                                            style="background-color: ${
+                                              group.category.color
+                                            }"
+                                        >
+                                            ${group.category.name}
+                                        </span>
+                                        <span class="text-gray-500">(${
+                                          group.notes.length
+                                        }件)</span>
+                                    </div>
+                                    <div class="space-y-2">
+                                        ${group.notes
+                                          .map(
+                                            (note) => `
+                                            <div class="bg-gray-50 p-3 rounded-lg">
+                                                <p class="text-gray-800 mb-1">${note.content}</p>
+                                                <p class="text-xs text-gray-500">${note.dateStr}</p>
+                                            </div>
+                                        `
+                                          )
+                                          .join("")}
+                                    </div>
+                                </div>
+                            `
+                              )
+                              .join("")}
+                        </div>
+                    `
+                    }
+                </div>
+            `;
+      };
+
+      const createCalendarView = (monthlyData) => {
+        if (monthlyData.length === 0) {
+          return `
+                    <div class="bg-white rounded-2xl shadow-lg p-6">
+                        <p class="text-gray-400 text-center py-8">まだノートの記録がありません</p>
+                    </div>
+                `;
+        }
+
+        const calendarHtml = monthlyData
+          .map(
+            (monthData, monthIdx) => `
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h2 class="text-xl font-semibold mb-4">📅 ${
+                      monthData.monthName
+                    }</h2>
+                    
+                    <div class="grid grid-cols-7 gap-2 mb-2">
+                        ${["日", "月", "火", "水", "木", "金", "土"]
+                          .map(
+                            (day) => `
+                            <div class="text-center text-sm font-semibold text-gray-600 py-1">
+                                ${day}
+                            </div>
+                        `
+                          )
+                          .join("")}
+                    </div>
+                    
+                    <div class="space-y-2">
+                        ${monthData.weeks
+                          .map(
+                            (week) => `
+                            <div class="grid grid-cols-7 gap-2">
+                                ${week
+                                  .map((day) => {
+                                    if (!day)
+                                      return `<div class="aspect-square"><div class="w-full h-full bg-transparent"></div></div>`;
+
+                                    const categoriesCount =
+                                      day.categories.length;
+                                    let contentHtml = "";
+
+                                    if (categoriesCount === 0) {
+                                      contentHtml = `<div class="w-full h-full bg-gray-50"></div>`;
+                                    } else if (categoriesCount === 1) {
+                                      contentHtml = `<div class="w-full h-full" style="background-color: ${day.categories[0].color}"></div>`;
+                                    } else if (categoriesCount === 2) {
+                                      contentHtml = `
+                                            <div class="w-full h-full flex">
+                                                <div class="w-1/2 h-full" style="background-color: ${day.categories[0].color}"></div>
+                                                <div class="w-1/2 h-full" style="background-color: ${day.categories[1].color}"></div>
+                                            </div>
+                                        `;
+                                    } else if (categoriesCount === 3) {
+                                      contentHtml = `
+                                            <div class="w-full h-full flex flex-wrap">
+                                                <div class="w-1/2 h-1/2" style="background-color: ${day.categories[0].color}"></div>
+                                                <div class="w-1/2 h-1/2" style="background-color: ${day.categories[1].color}"></div>
+                                                <div class="w-full h-1/2" style="background-color: ${day.categories[2].color}"></div>
+                                            </div>
+                                        `;
+                                    } else {
+                                      // 4つ以上
+                                      contentHtml = `
+                                            <div class="w-full h-full flex flex-wrap">
+                                                <div class="w-1/2 h-1/2" style="background-color: ${day.categories[0].color}"></div>
+                                                <div class="w-1/2 h-1/2" style="background-color: ${day.categories[1].color}"></div>
+                                                <div class="w-1/2 h-1/2" style="background-color: ${day.categories[2].color}"></div>
+                                                <div class="w-1/2 h-1/2" style="background-color: ${day.categories[3].color}"></div>
+                                            </div>
+                                        `;
+                                    }
+
+                                    const tooltipText = `${monthData.month}/${
+                                      day.day
+                                    }${
+                                      day.notes.length > 0
+                                        ? ` - ${day.categories
+                                            .map((c) => c.name)
+                                            .join("、")} (${
+                                            day.notes.length
+                                          }件)`
+                                        : ""
+                                    }`;
+
+                                    return `
+                                        <div class="aspect-square">
+                                            <div
+                                                class="w-full h-full rounded border-2 overflow-hidden transition-all hover:scale-105 cursor-pointer group relative"
+                                                style="border-color: ${
+                                                  categoriesCount > 0
+                                                    ? day.categories[0].color
+                                                    : "#e5e7eb"
+                                                }"
+                                            >
+                                                <div class="absolute top-1 left-1 text-xs font-semibold text-gray-600 z-10">
+                                                    ${day.day}
+                                                </div>
+                                                
+                                                ${contentHtml}
+                                                
+                                                <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-20">
+                                                    ${tooltipText}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                  })
+                                  .join("")}
+                            </div>
+                        `
+                          )
+                          .join("")}
+                    </div>
+                </div>
+            `
+          )
+          .join("");
+
+        const legendHtml = `
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-2">カラータグ</h3>
+                    <div class="flex flex-wrap gap-2">
+                        ${categories
+                          .map(
+                            (cat, idx) => `
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 rounded" style="background-color: ${cat.color}"></div>
+                                <span class="text-sm text-gray-600">${cat.name}</span>
+                            </div>
+                        `
+                          )
+                          .join("")}
+                    </div>
+                </div>
+            `;
+
+        return `<div class="space-y-6">${calendarHtml}${legendHtml}</div>`;
+      };
+
+      const createManageView = () => {
+        return `
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h2 class="text-xl font-semibold mb-4">気分タグを管理</h2>
+                    
+                    <div class="border rounded-lg p-4 mb-6">
+                        <h3 class="font-semibold mb-3">新しいタグを追加</h3>
+                        <div class="flex gap-3">
+                            <input
+                                type="text"
+                                placeholder="タグ名"
+                                id="newCategoryNameInput"
+                                class="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                            <input
+                                type="color"
+                                value="#FFB6C1"
+                                id="newCategoryColorInput"
+                                class="w-16 h-10 rounded cursor-pointer"
+                            />
+                            <button
+                                id="addCategoryButton"
+                                class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition"
+                            >
+                                追加
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-semibold mb-3">既存のタグ</h3>
+                        ${
+                          categories.length === 0
+                            ? `
+                            <p class="text-gray-400 text-center py-8">まだタグが作成されていません</p>
+                        `
+                            : `
+                            <div class="space-y-2">
+                                ${categories
+                                  .map(
+                                    (cat, idx) => `
+                                    <div class="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                                        <div class="flex items-center gap-3">
+                                            <div
+                                                class="w-8 h-8 rounded"
+                                                style="background-color: ${
+                                                  cat.color
+                                                }"
+                                            ></div>
+                                            <span class="font-medium">${
+                                              cat.name
+                                            }</span>
+                                            <span class="text-sm text-gray-500">
+                                                (${
+                                                  notes.filter(
+                                                    (n) =>
+                                                      n.category.name ===
+                                                      cat.name
+                                                  ).length
+                                                }件のノート)
+                                            </span>
+                                        </div>
+                                        <button
+                                            data-category-name="${cat.name}"
+                                            class="delete-category-btn text-red-500 hover:text-red-700 p-2"
+                                        >
+                                            <i data-lucide="trash-2" class="lucide" size="18"></i>
+                                        </button>
+                                    </div>
+                                `
+                                  )
+                                  .join("")}
+                            </div>
+                        `
+                        }
+                    </div>
+                </div>
+            `;
+      };
+
+      // =================================================================
+      // 6. イベントリスナー設定
+      // =================================================================
+
+      const attachEventListeners = () => {
+        const appRoot = document.getElementById("app");
+
+        // --- ナビゲーションと検索 ---
+        document
+          .getElementById("nav-buttons")
+          .addEventListener("click", (e) => {
+            const button = e.target.closest("button");
+            if (button) {
+              activeView = button.dataset.view;
+              renderApp();
+            }
+          });
+
+        const searchInput = document.getElementById("searchTermInput");
+        if (searchInput) {
+          searchInput.addEventListener("input", (e) => {
+            searchTerm = e.target.value;
+            renderApp();
+          });
+        }
+
+        // --- ノート作成/編集 ---
+        const currentNoteInput = document.getElementById("currentNoteInput");
+        if (currentNoteInput) {
+          currentNoteInput.addEventListener("input", (e) => {
+            currentNote = e.target.value;
+            // 入力中にボタンのdisabled状態を更新するために再描画 (Reactのような自動更新がないため)
+            renderApp();
+          });
+        }
+
+        const categorySelector = document.getElementById("category-selector");
+        if (categorySelector) {
+          categorySelector.addEventListener("click", (e) => {
+            const button = e.target.closest("button");
+            if (button && button.dataset.categoryName) {
+              const catName = button.dataset.categoryName;
+              selectedCategory = categories.find((c) => c.name === catName);
+              renderApp();
+            }
+          });
+        }
+
+        const addNoteBtn = document.getElementById("addNoteButton");
+        if (addNoteBtn) {
+          addNoteBtn.addEventListener("click", addNote);
+        }
+
+        const cancelEditBtn = document.getElementById("cancelEditButton");
+        if (cancelEditBtn) {
+          cancelEditBtn.addEventListener("click", () => {
+            editingNote = null;
+            currentNote = "";
+            selectedCategory = null;
+            renderApp();
+          });
+        }
+
+        // --- ノートリスト操作 (デリゲート) ---
+        appRoot.addEventListener("click", (e) => {
+          // 編集ボタン
+          const editBtn = e.target.closest(".edit-note-btn");
+          if (editBtn) {
+            const noteId = parseInt(editBtn.dataset.noteId);
+            editNote(noteId);
+          }
+
+          // 削除ボタン
+          const deleteBtn = e.target.closest(".delete-note-btn");
+          if (deleteBtn) {
+            const noteId = parseInt(deleteBtn.dataset.noteId);
+            deleteNote(noteId);
+          }
+
+          // コメント入力表示ボタン
+          const toggleCommentBtn = e.target.closest(".toggle-comment-input");
+          if (toggleCommentBtn) {
+            const noteId = parseInt(toggleCommentBtn.dataset.noteId);
+            commentingNote = noteId;
+            commentText = "";
+            renderApp();
+          }
+
+          // コメント送信ボタン
+          const sendCommentBtn = e.target.closest(".send-comment-btn");
+          if (sendCommentBtn) {
+            const noteId = parseInt(sendCommentBtn.dataset.noteId);
+            const input = document.getElementById(`commentInput-${noteId}`);
+            commentText = input.value; // 最新の入力値を反映
+            addComment(noteId);
+          }
+
+          // コメントキャンセルボタン
+          const cancelCommentBtn = e.target.closest(".cancel-comment-btn");
+          if (cancelCommentBtn) {
+            commentingNote = null;
+            commentText = "";
+            renderApp();
+          }
+
+          // コメント削除ボタン
+          const deleteCommentBtn = e.target.closest(".delete-comment-btn");
+          if (deleteCommentBtn) {
+            const noteId = parseInt(deleteCommentBtn.dataset.noteId);
+            const commentId = parseInt(deleteCommentBtn.dataset.commentId);
+            deleteComment(noteId, commentId);
+          }
+        });
+
+        // コメント入力時のテキスト更新
+        appRoot.addEventListener("input", (e) => {
+          const commentInput = e.target.closest(".comment-text-input");
+          if (commentInput) {
+            commentText = commentInput.value;
+            // 再描画は不要。送信時にStateを更新する。
+          }
+        });
+
+        // コメント入力でのEnterキー処理
+        appRoot.addEventListener("keypress", (e) => {
+          const commentInput = e.target.closest(".comment-text-input");
+          if (commentInput && e.key === "Enter") {
+            const noteId = parseInt(commentInput.dataset.noteId);
+            commentText = commentInput.value;
+            addComment(noteId);
+          }
+        });
+
+        // --- タグ管理 ---
+        const addCategoryBtn = document.getElementById("addCategoryButton");
+        if (addCategoryBtn) {
+          addCategoryBtn.addEventListener("click", addCategory);
+
+          // Enterキーでタグ追加
+          const newCatInput = document.getElementById("newCategoryNameInput");
+          if (newCatInput) {
+            newCatInput.addEventListener("keypress", (e) => {
+              if (e.key === "Enter") {
+                addCategory();
+              }
+            });
+          }
+        }
+
+        appRoot.addEventListener("click", (e) => {
+          const deleteCatBtn = e.target.closest(".delete-category-btn");
+          if (deleteCatBtn) {
+            const catName = deleteCatBtn.dataset.categoryName;
+            deleteCategory(catName);
+          }
+        });
+      };
+
+      // =================================================================
+      // 7. 初期化
+      // =================================================================
+      document.addEventListener("DOMContentLoaded", loadData);
+    </script>
+  </body>
+</html>
