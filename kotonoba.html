@@ -1,0 +1,2890 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>言の葉 - フラッシュカード学習システム</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=Crimson+Pro:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #2d3436;
+        --primary-light: #636e72;
+        --accent: #000000;
+        --accent-light: #2d3436;
+        --bg-main: #ffffff;
+        --bg-card: #ffffff;
+        --text-primary: #000000;
+        --text-secondary: #636e72;
+        --border: #dfe6e9;
+        --shadow: rgba(0, 0, 0, 0.08);
+        --success: #2d3436;
+        --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        --fall-duration: 60s;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Zen Kaku Gothic New", sans-serif;
+        background: var(--bg-main);
+        color: var(--text-primary);
+        line-height: 1.6;
+        overflow: hidden;
+      }
+
+      .app-container {
+        display: flex;
+        height: 100vh;
+      }
+
+      /* --- サイドバー --- */
+      .sidebar {
+        width: 250px;
+        background: #2d3436;
+        color: white;
+        padding: 2rem 1.5rem;
+        box-shadow: 2px 0 20px var(--shadow);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        z-index: 1000;
+        flex-shrink: 0;
+        position: relative;
+      }
+
+      .logo {
+        font-family: "Crimson Pro", serif;
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin-bottom: 2rem;
+        letter-spacing: 0.5px;
+        flex-shrink: 0;
+      }
+
+      .sidebar-scroll-content {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 5px;
+        margin-bottom: 1rem;
+      }
+
+      .sidebar-scroll-content::-webkit-scrollbar {
+        width: 4px;
+      }
+      .sidebar-scroll-content::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+      }
+
+      .nav-section {
+        margin-bottom: 2rem;
+      }
+
+      .nav-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.8rem;
+        padding-right: 0.5rem;
+      }
+
+      .nav-title {
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        opacity: 0.7;
+        font-weight: 500;
+        margin: 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: var(--transition);
+      }
+
+      .nav-title:hover {
+        opacity: 1;
+      }
+
+      .nav-toggle-icon {
+        font-size: 0.7rem;
+        transition: transform 0.3s;
+      }
+
+      .nav-title.collapsed .nav-toggle-icon {
+        transform: rotate(-90deg);
+      }
+
+      .nav-count {
+        font-size: 0.8rem;
+        margin-left: auto;
+        margin-right: 0.5rem;
+        opacity: 0.5;
+      }
+
+      .add-mini-btn {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 1.1rem;
+        line-height: 1;
+        transition: var(--transition);
+        padding-bottom: 2px;
+      }
+
+      .add-mini-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: white;
+      }
+
+      .nav-item {
+        padding: 0.8rem 1rem;
+        margin-bottom: 0.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .nav-item:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateX(5px);
+      }
+
+      .nav-item.active {
+        background: #636e72;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      .folder-list {
+        transition: all 0.3s ease;
+        overflow: hidden;
+        max-height: 500px;
+        opacity: 1;
+      }
+      .folder-list.collapsed {
+        max-height: 0;
+        opacity: 0;
+        margin-bottom: 0;
+      }
+
+      .folder-item {
+        padding: 0.6rem 1rem;
+        margin-bottom: 0.4rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: var(--transition);
+        background: rgba(255, 255, 255, 0.08);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.9rem;
+        position: relative;
+      }
+
+      .folder-item:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateX(3px);
+      }
+
+      .folder-item.active {
+        background: #636e72;
+        font-weight: 500;
+      }
+
+      /* サイドバーの削除ボタン */
+      .delete-nav-btn {
+        opacity: 0;
+        background: transparent;
+        border: none;
+        color: #ff7675;
+        cursor: pointer;
+        font-size: 1rem;
+        padding: 0 5px;
+        margin-left: 5px;
+        transition: var(--transition);
+      }
+      .folder-item:hover .delete-nav-btn {
+        opacity: 1;
+      }
+      .delete-nav-btn:hover {
+        color: #d63031;
+        transform: scale(1.2);
+      }
+
+      .sidebar-fixed-bottom {
+        flex-shrink: 0;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        margin-top: auto;
+      }
+
+      .sidebar-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.8rem;
+      }
+
+      .sidebar-btn {
+        padding: 0.7rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.05);
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: var(--transition);
+        text-align: center;
+        position: relative;
+        z-index: 1001;
+      }
+
+      .sidebar-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: white;
+      }
+
+      /* --- メインコンテンツ --- */
+      .main-content {
+        flex: 1;
+        padding: 2rem 3rem;
+        height: 100vh;
+        overflow-y: auto;
+        position: relative;
+        z-index: 1;
+      }
+
+      #homeView {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .home-static-content {
+        flex-shrink: 0;
+        z-index: 10;
+        background: var(--bg-main);
+        padding-bottom: 1rem;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+      }
+
+      .header-title {
+        font-family: "Crimson Pro", serif;
+        font-size: 2rem;
+        font-weight: 600;
+        color: var(--primary);
+      }
+
+      .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.95rem;
+        font-weight: 500;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .btn-primary {
+        background: var(--text-primary);
+        color: white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .btn-primary:hover {
+        background: var(--text-secondary);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+      }
+
+      .btn-secondary {
+        background: white;
+        color: var(--text-primary);
+        border: 1px solid var(--border);
+      }
+
+      .btn-secondary:hover {
+        background: var(--bg-main);
+        transform: translateY(-2px);
+      }
+
+      /* 設定パネル・統計・グラフ */
+      .settings-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px var(--shadow);
+      }
+
+      .settings-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .settings-row:last-child {
+        border-bottom: none;
+      }
+
+      .filter-section {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .filter-dropdown {
+        padding: 0.7rem 1.2rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        min-width: 150px;
+      }
+
+      .toggle-fall-btn {
+        padding: 0.7rem 1.2rem;
+        border: 1px solid var(--primary);
+        background: white;
+        color: var(--primary);
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        white-space: nowrap;
+      }
+
+      .toggle-fall-btn:hover {
+        background: var(--primary);
+        color: white;
+      }
+      .toggle-fall-btn.paused {
+        background: #f1f2f6;
+        color: var(--text-secondary);
+        border-color: var(--border);
+      }
+
+      /* 速度ボタンのスタイル */
+      .speed-btn {
+        padding: 0.6rem 1rem;
+        background: white;
+        border: none;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+        color: var(--text-secondary);
+        flex: 1;
+      }
+      .speed-btn:hover {
+        background: #f1f2f6;
+        color: var(--text-primary);
+      }
+      .speed-btn.active {
+        background: var(--primary);
+        color: white;
+        font-weight: 600;
+      }
+
+      /* ホームのカードアニメーション */
+      .cards-grid {
+        flex-grow: 1;
+        position: relative;
+        overflow: hidden;
+        width: 90%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 4rem;
+        min-height: 400px;
+      }
+
+      .falling-wrapper {
+        position: absolute;
+        width: 100%;
+        left: 0;
+        top: 0;
+        animation: infiniteFall var(--fall-duration) linear infinite;
+        will-change: transform;
+        z-index: 1;
+      }
+
+      @keyframes infiniteFall {
+        0% {
+          transform: translateY(0);
+        }
+        100% {
+          transform: translateY(var(--fall-height));
+        }
+      }
+
+      .flashcard {
+        background: transparent;
+        border-radius: 0;
+        padding: 0;
+        box-shadow: none;
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: absolute;
+        border: none;
+        opacity: 1;
+        min-width: auto;
+        max-width: 85%;
+        width: auto;
+        z-index: 10;
+      }
+
+      .flashcard:hover {
+        transform: translateY(-4px) scale(1.03);
+        z-index: 100 !important;
+      }
+
+      .flashcard.revealed {
+        z-index: 50;
+      }
+
+      .card-front {
+        margin-bottom: 0;
+        color: var(--text-primary);
+        text-align: left;
+        transition: all 0.3s ease;
+        letter-spacing: -0.02em;
+        display: inline;
+        margin-right: 0.1rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-weight: 500 !important;
+        text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
+      }
+
+      .card-back {
+        color: var(--text-secondary);
+        font-size: 1.2rem;
+        line-height: 1.6;
+        display: none;
+        margin-top: 0rem;
+        margin-right: 0.2rem;
+        text-align: left;
+        font-weight: 400;
+        max-width: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        padding: 0rem;
+        border-radius: 4px;
+        white-space: pre-wrap;
+      }
+
+      .card-back.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+      }
+
+      .check-btn {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 1.5px solid var(--text-secondary);
+        background: transparent;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: var(--transition);
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        opacity: 0;
+        vertical-align: middle;
+        margin-left: 0.3rem;
+      }
+
+      .flashcard:hover .check-btn {
+        opacity: 1;
+      }
+      .check-btn:hover {
+        background: var(--text-primary);
+        color: white;
+        border-color: var(--text-primary);
+        transform: scale(1.15);
+        opacity: 1;
+      }
+
+      /* 統計パネル（シンプル） */
+      .stats-panel {
+        background: transparent;
+        color: var(--text-primary);
+        border-radius: 0;
+        padding: 0;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        gap: 2rem;
+      }
+
+      .stat-item {
+        text-align: center;
+        flex: 1;
+      }
+      .stat-value {
+        font-size: 1.8rem;
+        font-weight: 50;
+        font-family: "Crimson Pro", serif;
+        color: var(--text-primary);
+      }
+      .stat-label {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin-top: 0.3rem;
+      }
+
+      /* リスト表示共通 */
+      .word-list {
+        margin-top: 2rem;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+      }
+
+      .word-item {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 6px var(--shadow);
+        cursor: default;
+      }
+
+      .word-item-front {
+        font-size: 1.5rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        white-space: pre-wrap;
+      }
+
+      .word-item-back {
+        color: #4a4a4a;
+        font-size: 1.2rem;
+        white-space: pre-wrap;
+      }
+
+      .text-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 0.85rem;
+        padding: 0;
+        text-decoration: underline;
+        transition: var(--transition);
+      }
+      .text-btn:hover {
+        color: var(--text-primary);
+      }
+      .text-btn.delete:hover {
+        color: #e74c3c;
+      }
+
+      /* --- チャート & カレンダー (学習進捗) --- */
+      .chart-controls {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .chart-tab {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border);
+        background: white;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: var(--transition);
+        color: var(--text-secondary);
+      }
+
+      .chart-tab:hover {
+        background: #f5f5f5;
+      }
+
+      .chart-tab.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+      }
+
+      .chart-container {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-around;
+        height: 250px;
+        padding: 10px 0;
+      }
+
+      .chart-bar-group {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+        height: 100%;
+        justify-content: flex-end;
+      }
+
+      .chart-bar {
+        width: 40%;
+        background: linear-gradient(to top, var(--primary), #636e72);
+        border-radius: 4px 4px 0 0;
+        transition: height 0.5s ease;
+        min-height: 2px;
+        position: relative;
+      }
+
+      .chart-bar:hover {
+        opacity: 0.8;
+      }
+
+      .chart-value {
+        font-size: 0.85rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+        color: var(--text-primary);
+      }
+
+      .chart-label {
+        margin-top: 10px;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-align: center;
+      }
+
+      /* モーダル */
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 2000;
+        backdrop-filter: blur(4px);
+        animation: fadeIn 0.3s ease;
+      }
+      .modal.active {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .modal-content {
+        background: white;
+        border-radius: 16px;
+        padding: 2.5rem;
+        width: 90%;
+        max-width: 600px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: scaleIn 0.3s ease;
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+      }
+      .modal-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--primary);
+      }
+      .close-btn {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: var(--bg-main);
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 1.2rem;
+      }
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+      .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--text-primary);
+      }
+      .form-input {
+        width: 100%;
+        padding: 0.9rem 1.2rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 1rem;
+        font-family: "Zen Kaku Gothic New", sans-serif;
+      }
+      .form-textarea {
+        min-height: 120px;
+        resize: vertical;
+      }
+      .editor-toolbar {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+        padding: 0.5rem;
+        background: var(--bg-main);
+        border-radius: 8px;
+      }
+      .editor-btn {
+        padding: 0.5rem 0.8rem;
+        border: none;
+        background: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+      }
+      .editor-btn:hover {
+        background: var(--primary);
+        color: white;
+      }
+      .tag-input-container {
+        display: flex;
+        gap: 0.5rem;
+      }
+      .tag-input {
+        flex: 1;
+      }
+      .added-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+      }
+      .added-tag {
+        padding: 0.4rem 0.9rem;
+        background: var(--primary);
+        color: white;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .remove-tag {
+        cursor: pointer;
+        font-weight: bold;
+      }
+      .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--text-secondary);
+      }
+      .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes scaleIn {
+        from {
+          opacity: 0;
+          transform: scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-container">
+      <aside class="sidebar">
+        <div class="logo">🍃 言の葉</div>
+
+        <div class="sidebar-scroll-content">
+          <nav class="nav-section">
+            <div class="nav-title" style="cursor: default">メニュー</div>
+            <div class="nav-item active" onclick="showView('home')">
+              <span>🏠 ホーム</span>
+            </div>
+            <div class="nav-item" onclick="showView('allCards')">
+              <span>📋 カード管理</span>
+              <span id="allCardsCount">0</span>
+            </div>
+            <div class="nav-item" onclick="showView('reviewed')">
+              <span>☑️ 復習履歴</span>
+              <span id="reviewedCount">0</span>
+            </div>
+            <div class="nav-item" onclick="showView('progress')">
+              <span>📊 学習進捗</span>
+            </div>
+            <div class="nav-item" onclick="showView('settings')">
+              <span>⚙️ 設定</span>
+            </div>
+          </nav>
+
+          <div class="nav-section">
+            <div class="nav-header">
+              <div
+                class="nav-title collapsed"
+                onclick="toggleSection('folderList', 'folderIcon')"
+              >
+                フォルダ
+                <span id="folderSectionCount" class="nav-count">(0)</span>
+                <span id="folderIcon" class="nav-toggle-icon">▼</span>
+              </div>
+              <button
+                class="add-mini-btn"
+                onclick="showAddFolderModal()"
+                title="フォルダを追加"
+              >
+                ＋
+              </button>
+            </div>
+            <div class="folder-list collapsed" id="folderList"></div>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-header">
+              <div
+                class="nav-title collapsed"
+                onclick="toggleSection('tagList', 'tagIcon')"
+              >
+                タグ
+                <span id="tagSectionCount" class="nav-count">(0)</span>
+                <span id="tagIcon" class="nav-toggle-icon">▼</span>
+              </div>
+              <button
+                class="add-mini-btn"
+                onclick="showAddTagModal()"
+                title="タグを追加"
+              >
+                ＋
+              </button>
+            </div>
+            <div class="folder-list collapsed" id="tagList"></div>
+          </div>
+        </div>
+
+        <div class="sidebar-fixed-bottom">
+          <div class="sidebar-actions">
+            <button class="sidebar-btn" onclick="refreshCards()">
+              🔄 更新
+            </button>
+            <button class="sidebar-btn" onclick="showAddCardModal()">
+              + カード追加
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <div id="homeView">
+          <div class="home-static-content">
+            <div class="stats-panel">
+              <div class="stat-item">
+                <div class="stat-value" id="totalCards">0</div>
+                <div class="stat-label">総カード数</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value" id="studyingCards">0</div>
+                <div class="stat-label">学習中</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value" id="masteredCards">0</div>
+                <div class="stat-label">習得済み</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value" id="todayReviews">0</div>
+                <div class="stat-label">今日の復習</div>
+              </div>
+            </div>
+
+            <div class="filter-section">
+              <select
+                class="filter-dropdown"
+                id="folderFilter"
+                onchange="filterCards()"
+              >
+                <option value="all">すべてのフォルダ</option>
+              </select>
+              <select
+                class="filter-dropdown"
+                id="tagFilter"
+                onchange="filterCards()"
+              >
+                <option value="all">すべてのタグ</option>
+              </select>
+
+              <button
+                class="toggle-fall-btn"
+                id="toggleFallBtn"
+                onclick="toggleFalling()"
+              >
+                ⏯️ Falling: ON
+              </button>
+
+              <div
+                class="speed-control"
+                style="
+                  gap: 0px;
+                  padding: 0;
+                  border: 1px solid var(--border);
+                  overflow: hidden;
+                  min-width: fit-content;
+                "
+              >
+                <button
+                  class="speed-btn"
+                  onclick="setSpeedLevel('slow')"
+                  id="btn-slow"
+                  style="
+                    border-right: 1px solid var(--border);
+                    border-radius: 8px 0 0 8px;
+                  "
+                >
+                  遅い
+                </button>
+                <button
+                  class="speed-btn active"
+                  onclick="setSpeedLevel('medium')"
+                  id="btn-medium"
+                  style="
+                    border-right: 1px solid var(--border);
+                    border-radius: 0;
+                  "
+                >
+                  普通
+                </button>
+                <button
+                  class="speed-btn"
+                  onclick="setSpeedLevel('fast')"
+                  id="btn-fast"
+                  style="border-radius: 0 8px 8px 0"
+                >
+                  早い
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="cards-grid" id="cardsGrid"></div>
+        </div>
+
+        <div id="reviewedView" style="display: none">
+          <div class="header"><h1 class="header-title">復習履歴</h1></div>
+          <div style="margin-bottom: 3rem">
+            <h2
+              style="
+                font-size: 1.3rem;
+                margin-bottom: 1.5rem;
+                color: var(--text-primary);
+                font-weight: 600;
+              "
+            >
+              習得中 (<span id="studyingReviewedCount">0</span>)
+            </h2>
+            <div class="word-list" id="studyingReviewedList"></div>
+          </div>
+          <div>
+            <h2
+              style="
+                font-size: 1.3rem;
+                margin-bottom: 1.5rem;
+                color: var(--text-primary);
+                font-weight: 600;
+              "
+            >
+              習得済み (<span id="masteredReviewedCount">0</span>)
+            </h2>
+            <div class="word-list" id="masteredReviewedList"></div>
+          </div>
+        </div>
+
+        <div id="allCardsView" style="display: none">
+          <div class="header">
+            <h1 class="header-title">カード管理</h1>
+            <div class="header-actions">
+              <button class="btn btn-primary" onclick="showAddCardModal()">
+                + カードを追加
+              </button>
+            </div>
+          </div>
+          <div
+            style="
+              display: flex;
+              gap: 1rem;
+              margin-bottom: 1.5rem;
+              flex-wrap: wrap;
+            "
+          >
+            <input
+              type="text"
+              id="searchInput"
+              class="form-input"
+              placeholder="🔍 単語を検索..."
+              style="flex: 1; min-width: 250px"
+              oninput="searchCards()"
+            />
+            <select
+              class="filter-dropdown"
+              id="manageFolderFilter"
+              onchange="filterManageCards()"
+              style="min-width: 180px"
+            >
+              <option value="all">すべてのフォルダ</option>
+            </select>
+            <select
+              class="filter-dropdown"
+              id="manageTagFilter"
+              onchange="filterManageCards()"
+              style="min-width: 150px"
+            >
+              <option value="all">すべてのタグ</option>
+            </select>
+            <select
+              class="filter-dropdown"
+              id="manageStatusFilter"
+              onchange="filterManageCards()"
+              style="min-width: 150px"
+            >
+              <option value="all">すべてのステータス</option>
+              <option value="studying">学習中</option>
+              <option value="mastered">習得済み</option>
+            </select>
+          </div>
+          <div
+            style="
+              margin-bottom: 1rem;
+              color: var(--text-secondary);
+              font-size: 0.9rem;
+            "
+          >
+            <span id="filteredCount">0</span> 件のカード
+          </div>
+          <div class="word-list" id="allCardsList"></div>
+        </div>
+
+        <div id="progressView" style="display: none">
+          <div class="header">
+            <h1 class="header-title">学習進捗</h1>
+          </div>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 1.5rem;
+              margin-bottom: 2rem;
+            "
+          >
+            <div
+              class="settings-panel"
+              style="text-align: center; padding: 1.5rem"
+            >
+              <div style="font-size: 2rem; margin-bottom: 0.5rem">📈</div>
+              <div
+                style="
+                  font-size: 1.8rem;
+                  font-weight: 700;
+                  color: var(--primary);
+                  font-family: 'Crimson Pro', serif;
+                "
+                id="progressTotal"
+              >
+                0
+              </div>
+              <div style="color: var(--text-secondary); margin-top: 0.3rem">
+                総学習カード数
+              </div>
+            </div>
+            <div
+              class="settings-panel"
+              style="text-align: center; padding: 1.5rem"
+            >
+              <div style="font-size: 2rem; margin-bottom: 0.5rem">🎯</div>
+              <div
+                style="
+                  font-size: 1.8rem;
+                  font-weight: 700;
+                  color: var(--accent);
+                  font-family: 'Crimson Pro', serif;
+                "
+                id="progressRate"
+              >
+                0%
+              </div>
+              <div style="color: var(--text-secondary); margin-top: 0.3rem">
+                習得率
+              </div>
+            </div>
+            <div
+              class="settings-panel"
+              style="text-align: center; padding: 1.5rem"
+            >
+              <div style="font-size: 2rem; margin-bottom: 0.5rem">🔥</div>
+              <div
+                style="
+                  font-size: 1.8rem;
+                  font-weight: 700;
+                  color: var(--success);
+                  font-family: 'Crimson Pro', serif;
+                "
+                id="progressStreak"
+              >
+                0
+              </div>
+              <div style="color: var(--text-secondary); margin-top: 0.3rem">
+                連続学習日数
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-panel">
+            <div class="chart-controls">
+              <button class="chart-tab active" onclick="switchChartMode('day')">
+                日
+              </button>
+              <button class="chart-tab" onclick="switchChartMode('week')">
+                週
+              </button>
+              <button class="chart-tab" onclick="switchChartMode('month')">
+                月
+              </button>
+              <button class="chart-tab" onclick="switchChartMode('6months')">
+                6ヶ月
+              </button>
+            </div>
+            <h3
+              style="
+                margin-bottom: 1.5rem;
+                color: var(--primary);
+                text-align: center;
+              "
+              id="chartTitle"
+            >
+              過去7日間の復習数
+            </h3>
+            <div id="progressChart" class="chart-container"></div>
+          </div>
+        </div>
+
+        <div id="settingsView" style="display: none">
+          <div class="header"><h1 class="header-title">設定</h1></div>
+          <div class="settings-panel">
+            <div class="settings-row">
+              <div>
+                <strong>復習間隔（時間）</strong>
+                <p style="font-size: 0.85rem; color: var(--text-secondary)">
+                  カードが再表示されるまでの時間
+                </p>
+              </div>
+              <input
+                type="number"
+                id="reviewInterval"
+                value="24"
+                min="1"
+                max="168"
+                style="
+                  width: 80px;
+                  padding: 0.5rem;
+                  border: 1px solid var(--border);
+                  border-radius: 6px;
+                "
+                onchange="saveSettings()"
+              />
+            </div>
+            <div class="settings-row">
+              <div>
+                <strong>習得までの復習回数</strong>
+                <p style="font-size: 0.85rem; color: var(--text-secondary)">
+                  習得済みになるまでの正解回数
+                </p>
+              </div>
+              <input
+                type="number"
+                id="masteryCount"
+                value="3"
+                min="1"
+                max="10"
+                style="
+                  width: 80px;
+                  padding: 0.5rem;
+                  border: 1px solid var(--border);
+                  border-radius: 6px;
+                "
+                onchange="saveSettings()"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div id="folderView" style="display: none">
+          <div class="header">
+            <h1 class="header-title" id="folderViewTitle">フォルダ名</h1>
+            <div class="header-actions">
+              <button class="btn btn-secondary" onclick="showView('home')">
+                ← 戻る
+              </button>
+              <button
+                class="btn btn-primary"
+                onclick="showAddCardModalForFolder()"
+              >
+                + 単語を追加
+              </button>
+            </div>
+          </div>
+          <div class="word-list" id="folderWordList"></div>
+        </div>
+      </main>
+    </div>
+
+    <div class="modal" id="addFolderModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">新しいフォルダを作成</h2>
+          <button class="close-btn" onclick="closeModal('addFolderModal')">
+            ×
+          </button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">フォルダ名</label>
+          <input
+            type="text"
+            class="form-input"
+            id="folderName"
+            placeholder="例: 英単語、日本史、プログラミング"
+          />
+        </div>
+        <button
+          class="btn btn-primary"
+          style="width: 100%"
+          onclick="addFolder()"
+        >
+          作成
+        </button>
+      </div>
+    </div>
+
+    <div class="modal" id="addTagModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">新しいタグを作成</h2>
+          <button class="close-btn" onclick="closeModal('addTagModal')">
+            ×
+          </button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">タグ名</label>
+          <input
+            type="text"
+            class="form-input"
+            id="newTagName"
+            placeholder="例: 重要、基礎、応用"
+          />
+        </div>
+        <button
+          class="btn btn-primary"
+          style="width: 100%"
+          onclick="addNewTag()"
+        >
+          作成
+        </button>
+      </div>
+    </div>
+
+    <div class="modal" id="addCardModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="cardModalTitle">カードを追加</h2>
+          <button class="close-btn" onclick="closeModal('addCardModal')">
+            ×
+          </button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">フォルダ</label>
+          <select class="form-input" id="cardFolder">
+            <option value="">フォルダを選択</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">覚える単語・文</label>
+          <div class="editor-toolbar">
+            <button
+              class="editor-btn"
+              onclick="formatText('bold', 'cardFront')"
+            >
+              🗐 太字
+            </button>
+            <button
+              class="editor-btn"
+              onclick="formatText('highlight', 'cardFront')"
+            >
+              🎨 ハイライト
+            </button>
+            <button
+              class="editor-btn"
+              onclick="formatText('large', 'cardFront')"
+            >
+              ➕ 拡大
+            </button>
+            <button
+              class="editor-btn"
+              onclick="formatText('underline', 'cardFront')"
+            >
+              _U アンダーライン
+            </button>
+            <button class="editor-btn" onclick="clearFormatting('cardFront')">
+              🧹 クリア
+            </button>
+          </div>
+          <textarea
+            class="form-input form-textarea"
+            id="cardFront"
+            placeholder="覚えたい単語や文章を入力"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">注釈・説明</label>
+          <div class="editor-toolbar">
+            <button class="editor-btn" onclick="formatText('bold', 'cardBack')">
+              🗐 太字
+            </button>
+            <button
+              class="editor-btn"
+              onclick="formatText('highlight', 'cardBack')"
+            >
+              🎨 ハイライト
+            </button>
+            <button
+              class="editor-btn"
+              onclick="formatText('large', 'cardBack')"
+            >
+              ➕ 拡大
+            </button>
+            <button
+              class="editor-btn"
+              onclick="formatText('underline', 'cardBack')"
+            >
+              _U アンダーライン
+            </button>
+            <button class="editor-btn" onclick="clearFormatting('cardBack')">
+              🧹 クリア
+            </button>
+          </div>
+          <textarea
+            class="form-input form-textarea"
+            id="cardBack"
+            placeholder="意味、説明、例文などを入力"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">タグ</label>
+          <div class="tag-input-container">
+            <input
+              type="text"
+              class="form-input tag-input"
+              id="tagInput"
+              placeholder="タグを入力してEnter"
+            />
+            <button class="btn btn-secondary" onclick="addTag()">追加</button>
+          </div>
+          <div class="added-tags" id="addedTags"></div>
+        </div>
+        <button
+          class="btn btn-primary"
+          style="width: 100%"
+          onclick="saveCard()"
+        >
+          保存
+        </button>
+      </div>
+    </div>
+
+    <script>
+      let data = {
+        folders: [],
+        cards: [],
+        settings: {
+          reviewInterval: 24,
+          masteryCount: 3,
+        },
+      };
+
+      const STORAGE_KEY = "flashcardData-v6";
+
+      let currentFolder = null;
+      let currentTags = [];
+      let currentEditingCard = null;
+      let isFallingPaused = false;
+      let currentSpeedLevel = "medium";
+
+      function init() {
+        loadData();
+        renderFolders();
+        renderTags();
+        renderCards();
+        updateStats();
+        updateFilters();
+
+        updateManageFilters();
+        filterManageCards();
+
+        document
+          .getElementById("tagInput")
+          .addEventListener("keypress", function (e) {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addTag();
+            }
+          });
+
+        setSpeedLevel("medium");
+      }
+
+      function setSpeedLevel(level) {
+        currentSpeedLevel = level;
+        document.querySelectorAll(".speed-btn").forEach((btn) => {
+          btn.classList.remove("active");
+        });
+        document.getElementById(`btn-${level}`).classList.add("active");
+        renderCards();
+      }
+
+      function generateSampleData() {
+        const now = new Date();
+        const f1 = "folder-english";
+        const f2 = "folder-it";
+        const f3 = "folder-history";
+        const f4 = "folder-yoji";
+
+        const folders = [
+          { id: f1, name: "英単語 (Academic)", createdAt: now.toISOString() },
+          { id: f2, name: "IT用語 (Web)", createdAt: now.toISOString() },
+          { id: f3, name: "歴史 (世界史)", createdAt: now.toISOString() },
+          { id: f4, name: "四字熟語", createdAt: now.toISOString() },
+        ];
+
+        const daysAgo = (days) => {
+          const d = new Date();
+          d.setDate(d.getDate() - days);
+          return d.toISOString();
+        };
+
+        const createCard = (fid, front, back, tags = [], status = "new") => {
+          let reviewCount = 0;
+          let mastered = false;
+          let masteredAt = undefined;
+          let lastReviewedAt = undefined;
+
+          if (status === "mastered") {
+            reviewCount = 3;
+            mastered = true;
+            masteredAt = daysAgo(Math.floor(Math.random() * 10));
+            lastReviewedAt = daysAgo(Math.floor(Math.random() * 5));
+          } else if (status === "learning") {
+            reviewCount = Math.floor(Math.random() * 2) + 1;
+            mastered = false;
+            lastReviewedAt = daysAgo(Math.floor(Math.random() * 3));
+          }
+
+          return {
+            id: "c-" + Math.random().toString(36).substr(2, 9),
+            folderId: fid,
+            front,
+            back,
+            tags,
+            createdAt: now.toISOString(),
+            reviewCount,
+            mastered,
+            masteredAt,
+            lastReviewedAt,
+          };
+        };
+
+        const cards = [];
+
+        // --- 1. 習得済み (Mastered) ---
+        cards.push(
+          createCard(
+            f1,
+            "Serendipity",
+            "素敵な偶然に出会うこと",
+            ["名詞"],
+            "mastered"
+          ),
+          createCard(
+            f1,
+            "Ubiquitous",
+            "至る所にある、偏在する",
+            ["形容詞"],
+            "mastered"
+          ),
+          createCard(
+            f2,
+            "API",
+            "Application Programming Interface",
+            ["基礎"],
+            "mastered"
+          ),
+          createCard(
+            f2,
+            "HTML",
+            "HyperText Markup Language",
+            ["基礎"],
+            "mastered"
+          ),
+          createCard(f2, "CSS", "Cascading Style Sheets", ["基礎"], "mastered"),
+          createCard(
+            f4,
+            "一期一会",
+            "一生に一度きりの出会い",
+            ["人生"],
+            "mastered"
+          ),
+          createCard(
+            f4,
+            "因果応報",
+            "行いの報いは必ず自分に返る",
+            ["仏教"],
+            "mastered"
+          ),
+          createCard(
+            f4,
+            "温故知新",
+            "昔のことを学び、新しい知識を得る",
+            ["学習"],
+            "mastered"
+          ),
+          createCard(f4, "花鳥風月", "自然の美しい風景", ["自然"], "mastered"),
+          createCard(
+            f4,
+            "臥薪嘗胆",
+            "目的のために苦労に耐えること",
+            ["努力"],
+            "mastered"
+          ),
+          createCard(
+            f3,
+            "1492年",
+            "コロンブス、アメリカ大陸到達",
+            ["世界史"],
+            "mastered"
+          ),
+          createCard(f3, "1789年", "フランス革命", ["世界史"], "mastered"),
+          createCard(f3, "1600年", "関ヶ原の戦い", ["日本史"], "mastered"),
+          createCard(f1, "Ambiguous", "曖昧な", ["形容詞"], "mastered"),
+          createCard(f1, "Benevolent", "慈悲深い", ["形容詞"], "mastered"),
+          createCard(
+            f2,
+            "Bug",
+            "プログラムの不具合",
+            ["プログラミング"],
+            "mastered"
+          ),
+          createCard(
+            f2,
+            "Cloud",
+            "インターネット上のサーバー利用",
+            ["インフラ"],
+            "mastered"
+          ),
+          createCard(
+            f2,
+            "Database",
+            "データの基地",
+            ["プログラミング"],
+            "mastered"
+          ),
+          createCard(
+            f1,
+            "Efficient",
+            "効率的な",
+            ["形容詞", "ビジネス"],
+            "mastered"
+          ),
+          createCard(f1, "Flexible", "柔軟な", ["形容詞"], "mastered")
+        );
+
+        // --- 2. 習得中 (Learning) ---
+        cards.push(
+          createCard(
+            f1,
+            "Ephemeral",
+            "儚い、つかの間の",
+            ["形容詞"],
+            "learning"
+          ),
+          createCard(f1, "Cacophony", "不協和音", ["名詞"], "learning"),
+          createCard(f2, "Cache", "一時保存データ", ["基礎"], "learning"),
+          createCard(f2, "DOM", "Document Object Model", ["基礎"], "learning"),
+          createCard(
+            f3,
+            "産業革命",
+            "18世紀後半〜、機械化",
+            ["世界史"],
+            "learning"
+          ),
+          createCard(f3, "ルネサンス", "文芸復興", ["文化史"], "learning"),
+          createCard(f4, "切磋琢磨", "仲間と励まし合う", ["学習"], "learning"),
+          createCard(
+            f2,
+            "JSON",
+            "データ交換フォーマット",
+            ["基礎"],
+            "learning"
+          ),
+          createCard(f1, "Debilitate", "衰弱させる", ["動詞"], "learning"),
+          createCard(f1, "Hypothesis", "仮説", ["名詞", "科学"], "learning")
+        );
+
+        // --- 3. 新規 (New) ---
+        cards.push(
+          createCard(f1, "Ineffable", "言葉にできない", ["形容詞"], "new"),
+          createCard(f1, "Juxtapose", "並列する", ["動詞"], "new"),
+          createCard(f1, "Kinetic", "運動の", ["形容詞", "物理"], "new"),
+          createCard(f1, "Lethargic", "無気力な", ["形容詞"], "new"),
+          createCard(f1, "Mellifluous", "甘美な（声・音）", ["形容詞"], "new"),
+          createCard(f1, "Nefarious", "極悪な", ["形容詞"], "new"),
+          createCard(f1, "Obfuscate", "曖昧にする", ["動詞"], "new"),
+          createCard(f1, "Pernicious", "有害な", ["形容詞"], "new"),
+          createCard(f1, "Quintessential", "典型的な", ["形容詞"], "new"),
+          createCard(f1, "Resilience", "回復力", ["名詞", "心理学"], "new"),
+          createCard(f2, "Encryption", "暗号化", ["基礎"], "new"),
+          createCard(
+            f2,
+            "Framework",
+            "開発の枠組み",
+            ["プログラミング"],
+            "new"
+          ),
+          createCard(f2, "Git", "バージョン管理", ["基礎"], "new"),
+          createCard(f2, "HTTP", "通信プロトコル", ["インフラ"], "new"),
+          createCard(f2, "IP Address", "ネット上の住所", ["インフラ"], "new"),
+          createCard(f2, "Kernel", "OSの中核", ["OS"], "new"),
+          createCard(f2, "Latency", "遅延", ["インフラ"], "new"),
+          createCard(
+            f2,
+            "Middleware",
+            "中間のソフト",
+            ["プログラミング"],
+            "new"
+          ),
+          createCard(f2, "Null", "無", ["プログラミング"], "new"),
+          createCard(f2, "Open Source", "公開コード", ["基礎"], "new")
+        );
+
+        return { folders, cards };
+      }
+
+      function loadData() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        let hasData = false;
+
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.cards && parsed.cards.length > 0) {
+            data = parsed;
+            hasData = true;
+          }
+        }
+
+        if (!hasData) {
+          const sample = generateSampleData();
+          data.folders = sample.folders;
+          data.cards = sample.cards;
+          saveData();
+        }
+
+        document.getElementById("reviewInterval").value =
+          data.settings.reviewInterval;
+        document.getElementById("masteryCount").value =
+          data.settings.masteryCount;
+      }
+
+      function saveData() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      }
+
+      function toggleSection(listId, iconId) {
+        const list = document.getElementById(listId);
+        const icon = document.getElementById(iconId);
+        const title = icon.parentElement;
+        list.classList.toggle("collapsed");
+        title.classList.toggle("collapsed");
+      }
+
+      function renderFolders() {
+        const folderList = document.getElementById("folderList");
+        const folderFilter = document.getElementById("folderFilter");
+        const cardFolderSelect = document.getElementById("cardFolder");
+        const countBadge = document.getElementById("folderSectionCount");
+
+        folderList.innerHTML = "";
+
+        const currentFilter = folderFilter.value;
+        const currentCardFolder = cardFolderSelect.value;
+
+        folderFilter.innerHTML =
+          '<option value="all">すべてのフォルダ</option>';
+        cardFolderSelect.innerHTML = '<option value="">フォルダを選択</option>';
+
+        countBadge.textContent = `(${data.folders.length})`;
+
+        data.folders.forEach((folder) => {
+          const count = data.cards.filter(
+            (c) => c.folderId === folder.id && !c.mastered
+          ).length;
+          const folderItem = document.createElement("div");
+          folderItem.className = "folder-item";
+
+          folderItem.innerHTML = `
+            <div style="flex:1; display:flex; justify-content:space-between; align-items:center;">
+                <span>${folder.name}</span><span style="opacity: 0.7;">${count}</span>
+            </div>
+            <button class="delete-nav-btn" onclick="deleteFolder('${folder.id}', event)">×</button>
+          `;
+          folderItem.onclick = (e) => {
+            if (e.target.classList.contains("delete-nav-btn")) return;
+            filterByFolder(folder.id);
+          };
+          folderList.appendChild(folderItem);
+
+          const option1 = document.createElement("option");
+          option1.value = folder.id;
+          option1.textContent = folder.name;
+          folderFilter.appendChild(option1);
+
+          const option2 = document.createElement("option");
+          option2.value = folder.id;
+          option2.textContent = folder.name;
+          cardFolderSelect.appendChild(option2);
+        });
+
+        if (currentFilter && currentFilter !== "all")
+          folderFilter.value = currentFilter;
+        if (currentCardFolder) cardFolderSelect.value = currentCardFolder;
+      }
+
+      function deleteFolder(folderId, event) {
+        event.stopPropagation();
+        if (
+          !confirm(
+            "フォルダを削除しますか？\n（中のカードは削除されず、フォルダ未所属になります）"
+          )
+        )
+          return;
+
+        data.folders = data.folders.filter((f) => f.id !== folderId);
+
+        data.cards.forEach((c) => {
+          if (c.folderId === folderId) c.folderId = "";
+        });
+
+        saveData();
+        renderFolders();
+        renderCards();
+        updateManageFilters();
+      }
+
+      function deleteTag(tagName, event) {
+        event.stopPropagation();
+        if (
+          !confirm(
+            `タグ「${tagName}」を削除しますか？\n（すべてのカードからこのタグが外れます）`
+          )
+        )
+          return;
+
+        data.cards.forEach((c) => {
+          if (c.tags) {
+            c.tags = c.tags.filter((t) => t !== tagName);
+          }
+        });
+
+        saveData();
+        renderTags();
+        renderCards();
+        updateManageFilters();
+      }
+
+      function renderTags() {
+        const tagList = document.getElementById("tagList");
+        const countBadge = document.getElementById("tagSectionCount");
+        const allTags = new Set();
+        data.cards.forEach((card) => {
+          if (card.tags) {
+            card.tags.forEach((tag) => allTags.add(tag));
+          }
+        });
+
+        countBadge.textContent = `(${allTags.size})`;
+
+        tagList.innerHTML = "";
+        allTags.forEach((tag) => {
+          const count = data.cards.filter(
+            (c) => c.tags && c.tags.includes(tag) && !c.mastered
+          ).length;
+          const tagItem = document.createElement("div");
+          tagItem.className = "folder-item";
+
+          tagItem.innerHTML = `
+            <div style="flex:1; display:flex; justify-content:space-between; align-items:center;">
+                <span>${tag}</span><span style="opacity: 0.7;">${count}</span>
+            </div>
+            <button class="delete-nav-btn" onclick="deleteTag('${tag}', event)">×</button>
+          `;
+          tagItem.onclick = (e) => {
+            if (e.target.classList.contains("delete-nav-btn")) return;
+            filterByTag(tag);
+          };
+          tagList.appendChild(tagItem);
+        });
+      }
+
+      function filterByFolder(folderId) {
+        showView("allCards");
+        document.getElementById("manageFolderFilter").value = folderId;
+        document.getElementById("manageTagFilter").value = "all";
+        document.getElementById("manageStatusFilter").value = "all";
+        document.getElementById("searchInput").value = "";
+        filterManageCards();
+      }
+
+      function filterByTag(tag) {
+        showView("allCards");
+        document.getElementById("manageFolderFilter").value = "all";
+        document.getElementById("manageTagFilter").value = tag;
+        document.getElementById("manageStatusFilter").value = "all";
+        document.getElementById("searchInput").value = "";
+        filterManageCards();
+      }
+
+      function toggleFalling() {
+        const wrapper = document.querySelector(".falling-wrapper");
+        const btn = document.getElementById("toggleFallBtn");
+        if (!wrapper) return;
+        isFallingPaused = !isFallingPaused;
+        if (isFallingPaused) {
+          wrapper.style.animationPlayState = "paused";
+          btn.innerHTML = "⏸️ Falling: PAUSE";
+          btn.classList.add("paused");
+        } else {
+          wrapper.style.animationPlayState = "running";
+          btn.innerHTML = "⏯️ Falling: ON";
+          btn.classList.remove("paused");
+        }
+      }
+
+      function renderCards() {
+        const grid = document.getElementById("cardsGrid");
+
+        const MAX_DISPLAY_COUNT = 90;
+        const FIXED_SPACING = 50;
+        const MIN_LOOP_HEIGHT = 800;
+
+        let cardsToShow = data.cards.filter((card) => {
+          if (card.mastered) return false;
+          if (card.hiddenUntil && new Date(card.hiddenUntil) > new Date()) {
+            return false;
+          }
+          return true;
+        });
+
+        const folderFilter = document.getElementById("folderFilter").value;
+        const tagFilter = document.getElementById("tagFilter").value;
+
+        if (folderFilter !== "all") {
+          cardsToShow = cardsToShow.filter((c) => c.folderId === folderFilter);
+        }
+        if (tagFilter !== "all") {
+          cardsToShow = cardsToShow.filter(
+            (c) => c.tags && c.tags.includes(tagFilter)
+          );
+        }
+
+        if (cardsToShow.length > MAX_DISPLAY_COUNT) {
+          cardsToShow = cardsToShow
+            .sort(() => 0.5 - Math.random())
+            .slice(0, MAX_DISPLAY_COUNT);
+        }
+
+        if (cardsToShow.length === 0) {
+          grid.innerHTML = `<div class="empty-state" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 100%;"><div class="empty-state-icon">🎉</div><h3>新しいカードはありません</h3><p>すべての単語を復習しました！</p></div>`;
+          return;
+        }
+
+        grid.innerHTML = "";
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "falling-wrapper";
+        if (isFallingPaused) wrapper.style.animationPlayState = "paused";
+
+        let loopHeight = Math.max(
+          cardsToShow.length * FIXED_SPACING,
+          MIN_LOOP_HEIGHT
+        );
+
+        const pixelsPerSecond = {
+          slow: 30,
+          medium: 60,
+          fast: 100,
+        };
+
+        let targetSpeed = pixelsPerSecond[currentSpeedLevel];
+        let duration = loopHeight / targetSpeed;
+
+        wrapper.style.setProperty("--fall-height", `${loopHeight}px`);
+        document.documentElement.style.setProperty(
+          "--fall-duration",
+          `${duration}s`
+        );
+
+        const cardStyles = cardsToShow.map((_, index) => {
+          const pos = calculateSpatialPosition(index);
+          const colorIntensity = Math.floor(Math.random() * 85) + 35;
+          const colorHex = colorIntensity.toString(16).padStart(2, "0");
+          const color = `#${colorHex}${colorHex}${colorHex}`;
+
+          const baseSize = 1.0 + Math.random() * 0.8;
+          const fontSize = (baseSize * 1.2).toFixed(2);
+
+          return { x: pos.x, color: color, fontSize: fontSize };
+        });
+
+        cardsToShow.forEach((card, index) => {
+          const style = cardStyles[index];
+          const spreadSpacing = loopHeight / cardsToShow.length;
+          const randomYOffset = Math.random() * 50 - 25;
+          const relativeY =
+            (index * spreadSpacing + randomYOffset) % loopHeight;
+
+          const cardEl = createCardElement(
+            card,
+            index,
+            style.x,
+            relativeY,
+            style.color,
+            style.fontSize
+          );
+          wrapper.appendChild(cardEl);
+
+          const copyEl = createCardElement(
+            card,
+            index,
+            style.x,
+            relativeY - loopHeight,
+            style.color,
+            style.fontSize
+          );
+          const backEl = copyEl.querySelector(".card-back");
+          if (backEl) backEl.id = backEl.id + "-copy";
+
+          copyEl.onclick = (e) => {
+            if (e.target.classList.contains("check-btn")) return;
+            backEl.classList.toggle("visible");
+            copyEl.classList.toggle("revealed");
+          };
+
+          wrapper.appendChild(copyEl);
+        });
+
+        grid.appendChild(wrapper);
+      }
+
+      function calculateSpatialPosition(index) {
+        const container = document.getElementById("cardsGrid");
+        const containerWidth = container.clientWidth;
+        const estimatedCardWidth = 300;
+        const maxLeft = containerWidth - estimatedCardWidth;
+        const minLeft = 0;
+        const x = Math.floor(Math.random() * (maxLeft - minLeft + 1)) + minLeft;
+        return { x };
+      }
+
+      function createCardElement(
+        card,
+        index,
+        x,
+        y,
+        color,
+        fontSize,
+        showMetadata = false
+      ) {
+        const div = document.createElement("div");
+        div.className = "flashcard";
+        div.dataset.cardId = card.id;
+        div.style.left = x + "px";
+        div.style.top = y + "px";
+
+        div.onmouseenter = () => {
+          const wrapper = document.querySelector(".falling-wrapper");
+          if (wrapper) wrapper.style.animationPlayState = "paused";
+        };
+        div.onmouseleave = () => {
+          const wrapper = document.querySelector(".falling-wrapper");
+          if (wrapper && !isFallingPaused)
+            wrapper.style.animationPlayState = "running";
+        };
+
+        div.innerHTML = `
+            <div style="line-height: 1.0;">
+                <span class="card-front" style="color: ${color}; font-size: ${fontSize}rem; font-weight: 500;">${formatCardText(
+          card.front
+        )}</span>
+                <span class="card-footer"><span class="check-btn" onclick="markAsKnown('${
+                  card.id
+                }', event)">✓</span></span>
+            </div>
+            <div class="card-back" id="back-${card.id}">${card.back}</div>
+        `;
+
+        div.onclick = (e) => {
+          if (e.target.classList.contains("check-btn")) return;
+          toggleCardBack(card.id);
+        };
+        return div;
+      }
+
+      function formatText(type, targetId) {
+        const textarea = document.getElementById(targetId);
+        if (!textarea) return;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selectedText = textarea.value.substring(start, end);
+        if (!selectedText) {
+          alert("フォーマットを適用するテキストを選択してください");
+          return;
+        }
+
+        let formattedText = "";
+        if (type === "bold") formattedText = `**${selectedText}**`;
+        else if (type === "highlight") formattedText = `==${selectedText}==`;
+        else if (type === "large") formattedText = `++${selectedText}++`;
+        else if (type === "underline") formattedText = `__${selectedText}__`;
+
+        textarea.value =
+          textarea.value.substring(0, start) +
+          formattedText +
+          textarea.value.substring(end);
+        textarea.focus();
+      }
+
+      function clearFormatting(targetId) {
+        const textarea = document.getElementById(targetId);
+        if (!textarea) return;
+        textarea.value = textarea.value
+          .replace(/\*\*(.*?)\*\*/g, "$1")
+          .replace(/==(.*?)==/g, "$1")
+          .replace(/\+\+(.*?)\+\+/g, "$1")
+          .replace(/__(.*?)__/g, "$1");
+      }
+
+      function formatCardText(text) {
+        return text
+          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+          .replace(
+            /==(.*?)==/g,
+            '<mark style="background: rgba(0,0,0,0.08); padding: 2px 4px;">$1</mark>'
+          )
+          .replace(
+            /\+\+(.*?)\+\+/g,
+            '<span style="font-size: 1.3em; font-weight: 600;">$1</span>'
+          )
+          .replace(/__(.*?)__/g, "<u>$1</u>");
+      }
+
+      function toggleCardBack(cardId) {
+        const backEls = document.querySelectorAll(`#back-${cardId}`);
+        backEls.forEach((el) => el.classList.toggle("visible"));
+        const cardEls = document.querySelectorAll(`[data-card-id="${cardId}"]`);
+        cardEls.forEach((el) => el.classList.toggle("revealed"));
+      }
+
+      function markAsKnown(cardId, event) {
+        event.stopPropagation();
+        const card = data.cards.find((c) => c.id === cardId);
+        if (!card) return;
+
+        card.reviewCount = (card.reviewCount || 0) + 1;
+        card.lastReviewedAt = new Date().toISOString();
+
+        if (card.reviewCount >= data.settings.masteryCount) {
+          card.mastered = true;
+          card.masteredAt = new Date().toISOString();
+        } else {
+          const hiddenUntil = new Date();
+          hiddenUntil.setHours(
+            hiddenUntil.getHours() + data.settings.reviewInterval
+          );
+          card.hiddenUntil = hiddenUntil.toISOString();
+        }
+        saveData();
+        renderCards();
+        updateStats();
+      }
+
+      function updateStats() {
+        const total = data.cards.length;
+        const mastered = data.cards.filter((c) => c.mastered).length;
+        const studying = total - mastered;
+        const reviewed = data.cards.filter(
+          (c) => c.reviewCount && c.reviewCount > 0
+        ).length;
+        const today = new Date().toDateString();
+        const todayReviews = data.cards.filter((c) => {
+          return (
+            c.lastReviewedAt &&
+            new Date(c.lastReviewedAt).toDateString() === today
+          );
+        }).length;
+
+        document.getElementById("totalCards").textContent = total;
+        document.getElementById("studyingCards").textContent = studying;
+        document.getElementById("masteredCards").textContent = mastered;
+        document.getElementById("reviewedCount").textContent = reviewed;
+        document.getElementById("allCardsCount").textContent = total;
+        document.getElementById("todayReviews").textContent = todayReviews;
+      }
+
+      function updateFilters() {
+        const tagFilter = document.getElementById("tagFilter");
+        const currentSelection = tagFilter.value;
+        const allTags = new Set();
+        data.cards.forEach((card) => {
+          if (card.tags) {
+            card.tags.forEach((tag) => allTags.add(tag));
+          }
+        });
+        tagFilter.innerHTML = '<option value="all">すべてのタグ</option>';
+        allTags.forEach((tag) => {
+          const option = document.createElement("option");
+          option.value = tag;
+          option.textContent = tag;
+          tagFilter.appendChild(option);
+        });
+        if (
+          currentSelection &&
+          Array.from(tagFilter.options).some(
+            (o) => o.value === currentSelection
+          )
+        ) {
+          tagFilter.value = currentSelection;
+        }
+      }
+
+      function filterCards() {
+        renderCards();
+      }
+
+      function showView(viewName) {
+        document.getElementById("homeView").style.display = "none";
+        document.getElementById("reviewedView").style.display = "none";
+        document.getElementById("settingsView").style.display = "none";
+        document.getElementById("folderView").style.display = "none";
+        document.getElementById("allCardsView").style.display = "none";
+        document.getElementById("progressView").style.display = "none";
+
+        document
+          .querySelectorAll(".nav-item")
+          .forEach((item) => item.classList.remove("active"));
+
+        if (viewName === "home") {
+          document.getElementById("homeView").style.display = "flex";
+          document.querySelectorAll(".nav-item")[0].classList.add("active");
+          setTimeout(renderCards, 10);
+        } else if (viewName === "allCards") {
+          document.getElementById("allCardsView").style.display = "block";
+          document.querySelectorAll(".nav-item")[1].classList.add("active");
+          updateManageFilters();
+          filterManageCards();
+        } else if (viewName === "reviewed") {
+          document.getElementById("reviewedView").style.display = "block";
+          document.querySelectorAll(".nav-item")[2].classList.add("active");
+          renderReviewedList();
+        } else if (viewName === "progress") {
+          document.getElementById("progressView").style.display = "block";
+          document.querySelectorAll(".nav-item")[3].classList.add("active");
+          renderProgressView();
+        } else if (viewName === "settings") {
+          document.getElementById("settingsView").style.display = "block";
+          document.querySelectorAll(".nav-item")[4].classList.add("active");
+        }
+      }
+
+      function renderReviewedList() {
+        const studyingList = document.getElementById("studyingReviewedList");
+        const masteredList = document.getElementById("masteredReviewedList");
+        const reviewedCards = data.cards.filter(
+          (c) => c.reviewCount && c.reviewCount > 0
+        );
+        const studyingCards = reviewedCards.filter((c) => !c.mastered);
+        const masteredCards = reviewedCards.filter((c) => c.mastered);
+
+        document.getElementById("studyingReviewedCount").textContent =
+          studyingCards.length;
+        document.getElementById("masteredReviewedCount").textContent =
+          masteredCards.length;
+
+        if (studyingCards.length === 0) {
+          studyingList.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📚</div><h3>習得中の単語はありません</h3><p>カードを復習すると、ここに表示されます</p></div>`;
+        } else {
+          renderReviewedCardList(studyingCards, studyingList);
+        }
+
+        if (masteredCards.length === 0) {
+          masteredList.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🎉</div><h3>習得済みの単語はまだありません</h3><p>カードを${data.settings.masteryCount}回復習すると、習得済みになります</p></div>`;
+        } else {
+          renderReviewedCardList(masteredCards, masteredList);
+        }
+      }
+
+      function renderReviewedCardList(cards, container) {
+        container.innerHTML = "";
+        cards.sort((a, b) => {
+          const dateA = a.lastReviewedAt
+            ? new Date(a.lastReviewedAt)
+            : new Date(0);
+          const dateB = b.lastReviewedAt
+            ? new Date(b.lastReviewedAt)
+            : new Date(0);
+          return dateB - dateA;
+        });
+
+        cards.forEach((card) => {
+          const item = document.createElement("div");
+          item.className = "word-item";
+          const folder = data.folders.find((f) => f.id === card.folderId);
+          const masteryRate = Math.round(
+            (card.reviewCount / data.settings.masteryCount) * 100
+          );
+
+          item.innerHTML = `
+                <div class="word-item-header">
+                    <div class="word-item-content">
+                        <div class="word-item-front">${formatCardText(
+                          card.front
+                        )}</div>
+                        <div class="word-item-back">${card.back}</div>
+                        ${
+                          card.tags && card.tags.length > 0
+                            ? `<div style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.8rem;">${card.tags
+                                .map(
+                                  (tag) =>
+                                    `<span style="padding: 0.3rem 0.8rem; background: rgba(0,0,0,0.08); color: var(--text-secondary); border-radius: 12px; font-size: 0.75rem; font-weight: 500;">${tag}</span>`
+                                )
+                                .join("")}</div>`
+                            : ""
+                        }
+                        <div style="margin-top: 0.8rem; font-size: 0.85rem; color: var(--text-secondary);">
+                            ${
+                              folder ? folder.name + " • " : ""
+                            }作成日: ${new Date(
+            card.createdAt
+          ).toLocaleDateString("ja-JP")}
+                            ${card.mastered ? " • ✅ 習得済み" : ""}
+                            ${
+                              card.reviewCount
+                                ? ` • 復習: ${card.reviewCount}/${data.settings.masteryCount}回 (${masteryRate}%)`
+                                : ""
+                            }
+                            <span class="word-item-actions">
+                                <button class="text-btn" onclick="restoreCard('${
+                                  card.id
+                                }')">復元</button>
+                                <button class="text-btn" onclick="editCard('${
+                                  card.id
+                                }')">編集</button>
+                                <button class="text-btn delete" onclick="deleteCard('${
+                                  card.id
+                                }')">削除</button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+          container.appendChild(item);
+        });
+      }
+
+      function restoreCard(cardId) {
+        const card = data.cards.find((c) => c.id === cardId);
+        if (!card) return;
+        if (
+          !confirm(
+            "このカードを復元してもよろしいですか？\n復習回数がリセットされ、ホーム画面に再表示されます。"
+          )
+        )
+          return;
+        card.mastered = false;
+        card.reviewCount = 0;
+        card.hiddenUntil = null;
+        delete card.masteredAt;
+        delete card.lastReviewedAt;
+        saveData();
+
+        renderReviewedList();
+        renderCards();
+        if (document.getElementById("allCardsView").style.display !== "none")
+          filterManageCards();
+
+        updateStats();
+      }
+
+      function showFolderView(folderId) {
+        currentFolder = folderId;
+        const folder = data.folders.find((f) => f.id === folderId);
+        if (!folder) return;
+        document.getElementById("homeView").style.display = "none";
+        document.getElementById("reviewedView").style.display = "none";
+        document.getElementById("settingsView").style.display = "none";
+        document.getElementById("folderView").style.display = "block";
+        document
+          .querySelectorAll(".nav-item, .folder-item")
+          .forEach((item) => item.classList.remove("active"));
+        document.getElementById("folderViewTitle").textContent = folder.name;
+        renderFolderWordList(folderId);
+      }
+
+      function renderFolderWordList(folderId) {
+        const list = document.getElementById("folderWordList");
+        const folderCards = data.cards.filter((c) => c.folderId === folderId);
+        if (folderCards.length === 0) {
+          list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📝</div><h3>このフォルダには単語がありません</h3><p>「単語を追加」ボタンから新しい単語を追加しましょう</p></div>`;
+          return;
+        }
+        renderCardList(folderCards, list);
+      }
+
+      function showAddFolderModal() {
+        document.getElementById("folderName").value = "";
+        document.getElementById("addFolderModal").classList.add("active");
+      }
+
+      function showAddTagModal() {
+        document.getElementById("newTagName").value = "";
+        document.getElementById("addTagModal").classList.add("active");
+      }
+
+      function showAddCardModal() {
+        currentEditingCard = null;
+        document.getElementById("cardModalTitle").textContent = "カードを追加";
+        const selectedFolder =
+          document.getElementById("manageFolderFilter").value;
+        const selectedTag = document.getElementById("manageTagFilter").value;
+        if (document.getElementById("allCardsView").style.display !== "none") {
+          document.getElementById("cardFolder").value =
+            selectedFolder !== "all" ? selectedFolder : "";
+          currentTags = selectedTag !== "all" ? [selectedTag] : [];
+        } else {
+          document.getElementById("cardFolder").value = "";
+          currentTags = [];
+        }
+        document.getElementById("cardFront").value = "";
+        document.getElementById("cardBack").value = "";
+        renderAddedTags();
+        document.getElementById("addCardModal").classList.add("active");
+      }
+
+      function showAddCardModalForFolder() {
+        currentEditingCard = null;
+        document.getElementById("cardModalTitle").textContent = "カードを追加";
+        document.getElementById("cardFolder").value = currentFolder;
+        document.getElementById("cardFront").value = "";
+        document.getElementById("cardBack").value = "";
+        currentTags = [];
+        renderAddedTags();
+        document.getElementById("addCardModal").classList.add("active");
+      }
+
+      function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove("active");
+      }
+
+      function addFolder() {
+        const name = document.getElementById("folderName").value.trim();
+        if (!name) {
+          alert("フォルダ名を入力してください");
+          return;
+        }
+        const folder = {
+          id: Date.now().toString(),
+          name: name,
+          createdAt: new Date().toISOString(),
+        };
+        data.folders.push(folder);
+        saveData();
+        renderFolders();
+        renderTags();
+        closeModal("addFolderModal");
+        updateManageFilters();
+      }
+
+      function addNewTag() {
+        const name = document.getElementById("newTagName").value.trim();
+        if (!name) {
+          alert("タグ名を入力してください");
+          return;
+        }
+        const allTags = new Set();
+        data.cards.forEach((card) => {
+          if (card.tags) card.tags.forEach((tag) => allTags.add(tag));
+        });
+        if (allTags.has(name)) {
+          alert("このタグは既に存在します");
+          return;
+        }
+        closeModal("addTagModal");
+      }
+
+      function addTag() {
+        const input = document.getElementById("tagInput");
+        const tag = input.value.trim();
+        if (!tag) return;
+        if (currentTags.includes(tag)) {
+          alert("このタグは既に追加されています");
+          return;
+        }
+        currentTags.push(tag);
+        input.value = "";
+        renderAddedTags();
+      }
+
+      function removeTag(tag) {
+        currentTags = currentTags.filter((t) => t !== tag);
+        renderAddedTags();
+      }
+
+      function renderAddedTags() {
+        const container = document.getElementById("addedTags");
+        container.innerHTML = "";
+        currentTags.forEach((tag) => {
+          const tagEl = document.createElement("div");
+          tagEl.className = "added-tag";
+          tagEl.innerHTML = `${tag}<span class="remove-tag" onclick="removeTag('${tag}')">×</span>`;
+          container.appendChild(tagEl);
+        });
+      }
+
+      function saveCard() {
+        const folderId = document.getElementById("cardFolder").value;
+        const front = document.getElementById("cardFront").value.trim();
+        const back = document.getElementById("cardBack").value.trim();
+        if (!folderId) {
+          alert("フォルダを選択してください");
+          return;
+        }
+        if (!front) {
+          alert("覚える単語・文を入力してください");
+          return;
+        }
+        if (currentEditingCard) {
+          const card = data.cards.find((c) => c.id === currentEditingCard);
+          card.folderId = folderId;
+          card.front = front;
+          card.back = back;
+          card.tags = [...currentTags];
+        } else {
+          const card = {
+            id: Date.now().toString(),
+            folderId: folderId,
+            front: front,
+            back: back,
+            tags: [...currentTags],
+            createdAt: new Date().toISOString(),
+            reviewCount: 0,
+            mastered: false,
+          };
+          data.cards.push(card);
+        }
+        saveData();
+        closeModal("addCardModal");
+        if (currentFolder) renderFolderWordList(currentFolder);
+        else renderCards();
+        updateStats();
+        updateFilters();
+
+        updateManageFilters();
+        renderTags();
+
+        if (document.getElementById("allCardsView").style.display !== "none")
+          filterManageCards();
+      }
+
+      function editCard(cardId) {
+        const card = data.cards.find((c) => c.id === cardId);
+        if (!card) return;
+        currentEditingCard = cardId;
+        document.getElementById("cardModalTitle").textContent = "カードを編集";
+        document.getElementById("cardFolder").value = card.folderId;
+        document.getElementById("cardFront").value = card.front;
+        document.getElementById("cardBack").value = card.back;
+        currentTags = card.tags ? [...card.tags] : [];
+        renderAddedTags();
+        document.getElementById("addCardModal").classList.add("active");
+      }
+
+      function deleteCard(cardId) {
+        if (!confirm("このカードを削除してもよろしいですか?")) return;
+        data.cards = data.cards.filter((c) => c.id !== cardId);
+        saveData();
+        if (currentFolder) renderFolderWordList(currentFolder);
+        else renderCards();
+        renderReviewedList();
+        updateStats();
+        updateManageFilters();
+        renderTags();
+        if (document.getElementById("allCardsView").style.display !== "none")
+          filterManageCards();
+      }
+
+      function refreshCards() {
+        renderCards();
+        updateStats();
+      }
+
+      function filterManageCards() {
+        const searchTerm = document
+          .getElementById("searchInput")
+          .value.toLowerCase();
+        const folderFilter =
+          document.getElementById("manageFolderFilter").value;
+        const tagFilter = document.getElementById("manageTagFilter").value;
+        const statusFilter =
+          document.getElementById("manageStatusFilter").value;
+        let filtered = [...data.cards];
+        if (searchTerm) {
+          filtered = filtered.filter(
+            (card) =>
+              card.front.toLowerCase().includes(searchTerm) ||
+              card.back.toLowerCase().includes(searchTerm) ||
+              (card.tags &&
+                card.tags.some((tag) => tag.toLowerCase().includes(searchTerm)))
+          );
+        }
+        if (folderFilter !== "all")
+          filtered = filtered.filter((c) => c.folderId === folderFilter);
+        if (tagFilter !== "all")
+          filtered = filtered.filter(
+            (c) => c.tags && c.tags.includes(tagFilter)
+          );
+        if (statusFilter === "studying")
+          filtered = filtered.filter((c) => !c.mastered);
+        else if (statusFilter === "mastered")
+          filtered = filtered.filter((c) => c.mastered);
+        filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        document.getElementById("filteredCount").textContent = filtered.length;
+        const list = document.getElementById("allCardsList");
+        if (filtered.length === 0) {
+          list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔍</div><h3>カードが見つかりません</h3><p>検索条件に一致するカードがありません</p></div>`;
+          return;
+        }
+        renderCardList(filtered, list);
+      }
+
+      function searchCards() {
+        filterManageCards();
+      }
+
+      function updateManageFilters() {
+        const folderFilter = document.getElementById("manageFolderFilter");
+        const tagFilter = document.getElementById("manageTagFilter");
+        const currentFolder = folderFilter.value;
+        const currentTag = tagFilter.value;
+        folderFilter.innerHTML =
+          '<option value="all">すべてのフォルダ</option>';
+        data.folders.forEach((folder) => {
+          const option = document.createElement("option");
+          option.value = folder.id;
+          option.textContent = folder.name;
+          folderFilter.appendChild(option);
+        });
+        const allTags = new Set();
+        data.cards.forEach((card) => {
+          if (card.tags) card.tags.forEach((tag) => allTags.add(tag));
+        });
+        tagFilter.innerHTML = '<option value="all">すべてのタグ</option>';
+        allTags.forEach((tag) => {
+          const option = document.createElement("option");
+          option.value = tag;
+          option.textContent = tag;
+          tagFilter.appendChild(option);
+        });
+        if (
+          currentFolder &&
+          Array.from(folderFilter.options).some(
+            (o) => o.value === currentFolder
+          )
+        )
+          folderFilter.value = currentFolder;
+        if (
+          currentTag &&
+          Array.from(tagFilter.options).some((o) => o.value === currentTag)
+        )
+          tagFilter.value = currentTag;
+      }
+
+      function renderCardList(cards, container) {
+        container.innerHTML = "";
+        cards.forEach((card) => {
+          const item = document.createElement("div");
+          item.className = "word-item";
+          const folder = data.folders.find((f) => f.id === card.folderId);
+          item.innerHTML = `
+                <div class="word-item-header">
+                    <div class="word-item-content">
+                        <div class="word-item-front">${formatCardText(
+                          card.front
+                        )}</div>
+                        <div class="word-item-back">${card.back}</div>
+                        ${
+                          card.tags && card.tags.length > 0
+                            ? `<div style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.8rem;">${card.tags
+                                .map(
+                                  (tag) =>
+                                    `<span style="padding: 0.3rem 0.8rem; background: rgba(0,0,0,0.08); color: var(--text-secondary); border-radius: 12px; font-size: 0.75rem; font-weight: 500;">${tag}</span>`
+                                )
+                                .join("")}</div>`
+                            : ""
+                        }
+                        <div style="margin-top: 0.8rem; font-size: 0.85rem; color: var(--text-secondary);">
+                            ${
+                              folder ? folder.name + " • " : ""
+                            }作成日: ${new Date(
+            card.createdAt
+          ).toLocaleDateString("ja-JP")}
+                            ${card.mastered ? " • ✅ 習得済み" : ""}
+                            ${
+                              card.reviewCount
+                                ? ` • 復習回数: ${card.reviewCount}`
+                                : ""
+                            }
+                            <span class="word-item-actions">
+                                <button class="text-btn" onclick="restoreCard('${
+                                  card.id
+                                }')">復元</button>
+                                <button class="text-btn" onclick="editCard('${
+                                  card.id
+                                }')">編集</button>
+                                <button class="text-btn delete" onclick="deleteCard('${
+                                  card.id
+                                }')">削除</button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+          container.appendChild(item);
+        });
+      }
+
+      let currentChartMode = "day";
+
+      function renderProgressView() {
+        const total = data.cards.length;
+        const mastered = data.cards.filter((c) => c.mastered).length;
+        const rate = total > 0 ? Math.round((mastered / total) * 100) : 0;
+
+        document.getElementById("progressTotal").textContent = total;
+        document.getElementById("progressRate").textContent = rate + "%";
+
+        const studyDates = [
+          ...new Set(
+            data.cards
+              .filter((c) => c.lastReviewedAt)
+              .map((c) => new Date(c.lastReviewedAt).toDateString())
+          ),
+        ].sort((a, b) => new Date(b) - new Date(a));
+
+        let streak = 0;
+        const today = new Date().toDateString();
+        if (
+          studyDates.length > 0 &&
+          (studyDates[0] === today ||
+            new Date(today) - new Date(studyDates[0]) < 86400000 * 2)
+        ) {
+          if (studyDates[0] === today) streak = 1;
+          for (let i = 1; i < studyDates.length; i++) {
+            const diff = Math.floor(
+              (new Date(studyDates[i - 1]) - new Date(studyDates[i])) /
+                (1000 * 60 * 60 * 24)
+            );
+            if (diff === 1) streak++;
+            else break;
+          }
+        }
+        document.getElementById("progressStreak").textContent = streak;
+
+        renderChart();
+      }
+
+      function switchChartMode(mode) {
+        currentChartMode = mode;
+        const tabs = document.querySelectorAll(".chart-tab");
+        tabs.forEach((tab) => {
+          if (tab.innerText === getModeLabel(mode)) {
+            tab.classList.add("active");
+          } else {
+            tab.classList.remove("active");
+          }
+        });
+        const titles = {
+          day: "過去7日間の復習数",
+          week: "過去7週間の復習数",
+          month: "過去7ヶ月間の復習数",
+          "6months": "過去6ヶ月間の復習数",
+        };
+        document.getElementById("chartTitle").textContent = titles[mode];
+
+        renderChart();
+      }
+
+      function getModeLabel(mode) {
+        if (mode === "day") return "日";
+        if (mode === "week") return "週";
+        if (mode === "month") return "月";
+        if (mode === "6months") return "6ヶ月";
+        return "";
+      }
+
+      function renderChart() {
+        const chart = document.getElementById("progressChart");
+        chart.innerHTML = "";
+
+        const now = new Date();
+        let barsCount = 7;
+        let dateDiffFn;
+        let labelFn;
+
+        if (currentChartMode === "day") {
+          barsCount = 7;
+          dateDiffFn = (d) => Math.floor((now - d) / (1000 * 60 * 60 * 24));
+          labelFn = (i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            return `${d.getMonth() + 1}/${d.getDate()}`;
+          };
+        } else if (currentChartMode === "week") {
+          barsCount = 7;
+          dateDiffFn = (d) => Math.floor((now - d) / (1000 * 60 * 60 * 24 * 7));
+          labelFn = (i) => (i === 0 ? "今週" : `${i}週前`);
+        } else if (currentChartMode === "month") {
+          barsCount = 7;
+          dateDiffFn = (d) =>
+            (now.getFullYear() - d.getFullYear()) * 12 +
+            (now.getMonth() - d.getMonth());
+          labelFn = (i) => {
+            const d = new Date();
+            d.setMonth(d.getMonth() - i);
+            return `${d.getMonth() + 1}月`;
+          };
+        } else if (currentChartMode === "6months") {
+          barsCount = 6;
+          dateDiffFn = (d) =>
+            (now.getFullYear() - d.getFullYear()) * 12 +
+            (now.getMonth() - d.getMonth());
+          labelFn = (i) => {
+            const d = new Date();
+            d.setMonth(d.getMonth() - i);
+            return `${d.getMonth() + 1}月`;
+          };
+        }
+
+        const counts = new Array(barsCount).fill(0);
+
+        data.cards.forEach((c) => {
+          if (c.lastReviewedAt) {
+            const d = new Date(c.lastReviewedAt);
+            const diff = dateDiffFn(d);
+            if (diff >= 0 && diff < barsCount) {
+              counts[diff]++;
+            }
+          }
+        });
+
+        const maxVal = Math.max(...counts, 5);
+
+        for (let i = barsCount - 1; i >= 0; i--) {
+          const count = counts[i];
+          const heightPercent = (count / maxVal) * 100;
+
+          const barGroup = document.createElement("div");
+          barGroup.className = "chart-bar-group";
+
+          barGroup.innerHTML = `
+          <div class="chart-value">${count}</div>
+          <div class="chart-bar" style="height: ${Math.max(
+            heightPercent,
+            1
+          )}%;"></div>
+          <div class="chart-label">${labelFn(i)}</div>
+      `;
+          chart.appendChild(barGroup);
+        }
+      }
+      function saveSettings() {
+        const intervalInput = document.getElementById("reviewInterval");
+        if (intervalInput)
+          data.settings.reviewInterval = parseInt(intervalInput.value);
+
+        const masteryInput = document.getElementById("masteryCount");
+        if (masteryInput)
+          data.settings.masteryCount = parseInt(masteryInput.value);
+
+        saveData();
+        renderCards();
+      }
+
+      window.onclick = function (event) {
+        if (event.target.classList.contains("modal")) {
+          event.target.classList.remove("active");
+        }
+      };
+
+      init();
+    </script>
+  </body>
+</html>
