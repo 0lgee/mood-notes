@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portfolio - LI SIQING</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;500&family=Inter:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --bg: #0a0a0a;
+        --bg-surface: #111111;
+        --text-primary: #ffffff;
+        --text-secondary: #888888;
+        --text-muted: #555555;
+        --border: #333333;
+        --accent: #ffffff;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family: "Zen Kaku Gothic New", sans-serif;
+        background: var(--bg);
+        color: var(--text-primary);
+        line-height: 1.8;
+        font-weight: 300;
+        overflow-x: hidden;
+      }
+
+      .geo-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+        overflow: hidden;
+      }
+
+      .grid-pattern {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: linear-gradient(
+            rgba(255, 255, 255, 0.02) 1px,
+            transparent 1px
+          ),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        background-size: 60px 60px;
+      }
+
+      .dot {
+        position: absolute;
+        width: 2px;
+        height: 2px;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 50%;
+        animation: float-dot 20s infinite ease-in-out;
+      }
+
+      @keyframes float-dot {
+        0%,
+        100% {
+          transform: translate(0, 0);
+          opacity: 0.6;
+        }
+        25% {
+          transform: translate(20px, -30px);
+          opacity: 0.9;
+        }
+        50% {
+          transform: translate(-10px, -50px);
+          opacity: 0.6;
+        }
+        75% {
+          transform: translate(30px, -20px);
+          opacity: 0.8;
+        }
+      }
+
+      .triangle {
+        position: absolute;
+        width: 0;
+        height: 0;
+        border-style: solid;
+        animation: rotate-slow 60s infinite linear,
+          triangle-pulse 4s infinite ease-in-out;
+      }
+
+      .triangle-1 {
+        border-width: 0 80px 140px 80px;
+        border-color: transparent transparent #ffffff transparent;
+        top: 15%;
+        right: 10%;
+      }
+
+      .triangle-2 {
+        border-width: 100px 60px 0 60px;
+        border-color: #ffffff transparent transparent transparent;
+        bottom: 20%;
+        left: 5%;
+        animation: rotate-slow 60s infinite linear reverse,
+          triangle-pulse 4s infinite ease-in-out;
+      }
+
+      @keyframes rotate-slow {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes triangle-pulse {
+        0%,
+        100% {
+          opacity: 0.1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 0 2rem;
+        position: relative;
+        z-index: 1;
+      }
+
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 1.5rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 100;
+        background: linear-gradient(to bottom, var(--bg), transparent);
+      }
+
+      .nav-logo {
+        font-family: "Inter", sans-serif;
+        font-size: 0.9rem;
+        letter-spacing: 0.2em;
+        font-weight: 400;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 2.5rem;
+        list-style: none;
+      }
+
+      .nav-links a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.85rem;
+        letter-spacing: 0.1em;
+        transition: color 0.3s;
+      }
+
+      .nav-links a:hover {
+        color: var(--text-primary);
+      }
+
+      .hero {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 6rem 2rem;
+      }
+
+      .hero-quote {
+        max-width: 700px;
+        position: relative;
+      }
+
+      .hero-text {
+        font-size: 1.35rem;
+        line-height: 2.4;
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 300;
+        letter-spacing: 0.02em;
+      }
+
+      .hero-text em {
+        font-style: normal;
+        color: var(--text-primary);
+      }
+
+      .scroll-line {
+        position: absolute;
+        bottom: 3rem;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .scroll-line span {
+        font-family: "Inter", sans-serif;
+        font-size: 0.7rem;
+        letter-spacing: 0.3em;
+        color: var(--text-muted);
+      }
+
+      .scroll-line::after {
+        content: "";
+        width: 1px;
+        height: 60px;
+        background: linear-gradient(to bottom, var(--text-muted), transparent);
+        animation: scroll-pulse 2s infinite;
+      }
+
+      @keyframes scroll-pulse {
+        0%,
+        100% {
+          opacity: 0.3;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      .about-section {
+        padding: 8rem 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .section-header {
+        display: flex;
+        align-items: baseline;
+        gap: 2rem;
+        margin-bottom: 4rem;
+      }
+
+      .section-number {
+        font-family: "Inter", sans-serif;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        letter-spacing: 0.1em;
+      }
+
+      .section-title {
+        font-family: "Inter", sans-serif;
+        font-size: 0.9rem;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+      }
+
+      .about-content {
+        max-width: 45%;
+        margin-left: auto;
+        margin-right: 18%;
+      }
+
+      @media (max-width: 768px) {
+        .about-content {
+          max-width: 100%;
+          margin-left: 0;
+          margin-right: 0;
+        }
+      }
+
+      .about-text {
+        font-size: 1.1rem;
+        line-height: 2.2;
+        color: var(--text-secondary);
+      }
+
+      .about-text p {
+        margin-bottom: 1.5rem;
+      }
+
+      .about-text strong {
+        color: var(--text-secondary);
+        font-weight: 300;
+      }
+
+      .works-section {
+        padding: 8rem 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .works-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-top: 4rem;
+      }
+
+      @media (max-width: 768px) {
+        .works-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .work-card {
+        position: relative;
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        padding: 3rem;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        text-decoration: none;
+        display: block;
+        overflow: hidden;
+      }
+
+      .work-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.1) 0%,
+          transparent 100%
+        );
+        opacity: 0;
+        transition: opacity 0.4s;
+      }
+
+      .work-card:hover {
+        border-color: var(--text-muted);
+        transform: translateY(-4px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      }
+
+      .work-card:hover::before {
+        opacity: 1;
+      }
+
+      .work-number {
+        font-family: "Inter", sans-serif;
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        letter-spacing: 0.2em;
+        margin-bottom: 2rem;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .work-card:hover .work-number {
+        color: var(--text-secondary);
+        letter-spacing: 0.25em;
+      }
+
+      .work-title {
+        font-size: 2rem;
+        font-weight: 400;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+        letter-spacing: 0.1em;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .work-card:hover .work-title {
+        letter-spacing: 0.15em;
+      }
+
+      .work-subtitle {
+        font-family: "Inter", sans-serif;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        letter-spacing: 0.15em;
+        margin-bottom: 2rem;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .work-card:hover .work-subtitle {
+        color: var(--text-secondary);
+      }
+
+      .work-description {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        line-height: 1.9;
+        margin-bottom: 2rem;
+      }
+
+      .work-arrow {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        letter-spacing: 0.1em;
+        transition: all 0.3s;
+      }
+
+      .work-card:hover .work-arrow {
+        color: var(--text-primary);
+        gap: 1.2rem;
+      }
+
+      .work-arrow::after {
+        content: "→";
+        transition: transform 0.3s;
+      }
+
+      .work-card:hover .work-arrow::after {
+        transform: translateX(4px);
+      }
+
+      .contact-section {
+        padding: 8rem 0;
+        border-top: 1px solid var(--border);
+        text-align: center;
+      }
+
+      .contact-name {
+        font-size: 1.8rem;
+        font-weight: 400;
+        letter-spacing: 0.15em;
+        margin-bottom: 0.5rem;
+      }
+
+      .contact-title {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        letter-spacing: 0.2em;
+        margin-bottom: 2rem;
+      }
+
+      .contact-links {
+        display: flex;
+        justify-content: center;
+        gap: 3rem;
+      }
+
+      .contact-link {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.9rem;
+        letter-spacing: 0.1em;
+        padding-bottom: 0.3rem;
+        border-bottom: 1px solid transparent;
+        transition: all 0.3s;
+      }
+
+      .contact-link:hover {
+        color: var(--text-primary);
+        border-bottom-color: var(--text-primary);
+      }
+
+      .fade-in {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .fade-in.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      @media (max-width: 768px) {
+        nav {
+          padding: 1rem;
+        }
+
+        .nav-links {
+          gap: 1.5rem;
+        }
+
+        .hero-text {
+          font-size: 1.1rem;
+        }
+
+        .work-title {
+          font-size: 1.6rem;
+        }
+
+        .contact-links {
+          flex-direction: column;
+          gap: 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="geo-container">
+      <div class="grid-pattern"></div>
+      <div class="triangle triangle-1"></div>
+      <div class="triangle triangle-2"></div>
+      <div id="dots"></div>
+    </div>
+
+    <nav>
+      <div class="nav-logo">PORTFOLIO</div>
+      <ul class="nav-links">
+        <li><a href="#about">About</a></li>
+        <li><a href="#works">Works</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </nav>
+
+    <section class="hero">
+      <div class="hero-quote">
+        <p class="hero-text">
+          人間と動物を分けるものは、ツールを作る能力だと言われています。<br />
+          しかし現代社会では、ツールを作るよりも商品化されたツールを選ぶことがほとんどです。<br />
+          プログラミングは、誰もが再び「作る側」になれる可能性を開いてくれます。<br />
+          ウェブやアプリケーションを通じて自分の考えを形にし、<br />
+          誰かの役に立つものを生み出す——<br />
+          この創造的なプロセスに、私は強く惹かれています。
+        </p>
+      </div>
+      <div class="scroll-line">
+        <span>SCROLL</span>
+      </div>
+    </section>
+
+    <section class="about-section" id="about">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-number">01</span>
+          <h2 class="section-title">About</h2>
+        </div>
+
+        <div class="about-content fade-in">
+          <div class="about-text">
+            <p>
+              「こんなものがあったら」という日常の小さな気づきを出発点に、独学で身につけた知識を活用してウェブデザインに取り組んでいます。
+              企画立案・情報設計から、AI
+              を活用した実装までのデザインプロセスを一貫して手がけ、発想を具体的な形へと落とし込んでいます。
+            </p>
+            <p>
+              機能性を満たすだけでなく、背景にあるストーリーや体験価値まで丁寧に設計することで、クライアントにもユーザーにも「選ばれる」デザインの実現を目指しています。
+              デザインが持つ可能性に強い関心と意欲を持ち、より良い表現と体験を届けるために、学びと改善を継続して取り組んでいます。
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="works-section" id="works">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-number">02</span>
+          <h2 class="section-title">Works</h2>
+        </div>
+
+        <div class="works-grid">
+          <a href="hitoriboshi-showcase.html" class="work-card fade-in" target="_blank" 
+          rel="noopener noreferrer">
+            <div class="work-number">PROJECT 01</div>
+            <h3 class="work-title">ひとりぼし</h3>
+            <p class="work-subtitle">Private Journal Space</p>
+            <p class="work-description">
+              「一人ぼっち」を「一人星」へ——日常のひらめきを静かに記録するジャーナリングサイト。
+            </p>
+            <span class="work-arrow">View Project</span>
+          </a>
+
+          <a href="kotonoha-showcase.html" class="work-card fade-in" target="_blank" 
+          rel="noopener noreferrer">
+            <div class="work-number">PROJECT 02</div>
+            <h3 class="work-title">言の葉</h3>
+            <p class="work-subtitle">Vocabulary Learning</p>
+            <p class="work-description">
+              「記憶に、重力を」——落ちてくる言葉をキャッチして、遊び感覚で覚える単語学習体験。
+            </p>
+            <span class="work-arrow">View Project</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="contact-section" id="contact">
+      <div class="container fade-in">
+        <div class="section-header">
+          <span class="section-number">03</span>
+          <h2 class="section-title">Contact</h2>
+        </div>
+
+        <h3 class="contact-name">李 思晴</h3>
+        <p class="contact-title">LI SIQING</p>
+
+        <div class="contact-links">
+          <a href="summmerhhh@gmail.com" class="contact-link"
+            >summmerhhh@gmail.com</a
+          >
+        </div>
+      </div>
+    </section>
+
+    <script>
+      const dotsContainer = document.getElementById("dots");
+      const dotCount = 30;
+
+      for (let i = 0; i < dotCount; i++) {
+        const dot = document.createElement("div");
+        dot.className = "dot";
+        dot.style.left = Math.random() * 100 + "%";
+        dot.style.top = Math.random() * 100 + "%";
+        dot.style.animationDelay = Math.random() * 20 + "s";
+        dot.style.animationDuration = 15 + Math.random() * 10 + "s";
+        dotsContainer.appendChild(dot);
+      }
+
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: "0px 0px -50px 0px",
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+          }
+        });
+      }, observerOptions);
+
+      document.querySelectorAll(".fade-in").forEach((el) => {
+        observer.observe(el);
+      });
+
+      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+        anchor.addEventListener("click", function (e) {
+          e.preventDefault();
+          const target = document.querySelector(this.getAttribute("href"));
+          if (target) {
+            target.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
